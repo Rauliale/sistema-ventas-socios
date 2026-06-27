@@ -36,8 +36,13 @@ export function ProductForm({ initialData = {}, onSubmit, onCancel, isLoading = 
   const handleSubmit = (e) => {
     e.preventDefault();
     const { profit_margin, ...dataToSubmit } = formData;
+    
+    // Auto-generate SKU if left empty
+    const finalSku = dataToSubmit.sku?.trim() || `SKU-${Date.now()}`;
+    
     onSubmit({
       ...dataToSubmit,
+      sku: finalSku,
       cost_price: parseFloat(formData.cost_price),
       sale_price: parseFloat(formData.sale_price)
     });
@@ -64,7 +69,7 @@ export function ProductForm({ initialData = {}, onSubmit, onCancel, isLoading = 
           </div>
           <div>
             <Input 
-              label="SKU" 
+              label="SKU (Opcional - Auto)" 
               value={formData.sku} 
               onChange={e => setFormData({...formData, sku: e.target.value})} 
             />
