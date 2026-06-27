@@ -4,35 +4,23 @@ import React, { useState } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Table } from '../../components/ui/Table';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
 import { useProducts } from '../../hooks/useProducts';
+import { ProductForm } from '../../components/ProductForm';
 
 export default function Productos() {
   const { products, loading, addProduct } = useProducts();
   const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
   
-  const [formData, setFormData] = useState({
-    name: '',
-    barcode: '',
-    sku: '',
-    sale_price: 0,
-    cost_price: 0
-  });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleAddProduct = async (formData) => {
     try {
-      await addProduct({
-        name: formData.name,
-        barcode: formData.barcode,
-        sku: formData.sku,
-        sale_price: parseFloat(formData.sale_price),
-        cost_price: parseFloat(formData.cost_price)
-      });
+      setSaving(true);
+      await addProduct(formData);
       setShowForm(false);
-      setFormData({ name: '', barcode: '', sku: '', sale_price: 0, cost_price: 0 });
     } catch (err) {
       alert("Error al agregar producto: " + err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -54,19 +42,11 @@ export default function Productos() {
       </div>
 
       {showForm && (
-        <Card title="Agregar Producto" style={{ marginBottom: '2rem' }}>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-            <Input label="Nombre" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required style={{flex: '1 1 200px'}} />
-            <Input label="Código de Barras" value={formData.barcode} onChange={e => setFormData({...formData, barcode: e.target.value})} style={{flex: '1 1 200px'}} />
-            <Input label="SKU" value={formData.sku} onChange={e => setFormData({...formData, sku: e.target.value})} style={{flex: '1 1 200px'}} />
-            <Input label="Costo" type="number" step="0.01" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value})} required style={{flex: '1 1 100px'}} />
-            <Input label="Venta" type="number" step="0.01" value={formData.sale_price} onChange={e => setFormData({...formData, sale_price: e.target.value})} required style={{flex: '1 1 100px'}} />
-            
-            <div style={{ width: '100%', marginTop: '1rem' }}>
-              <Button type="submit">Guardar Producto</Button>
-            </div>
-          </form>
-        </Card>
+        <ProductForm 
+          onSubmit={handleAddProduct} 
+          onCancel={() => setShowForm(false)} 
+          isLoading={saving} 
+        />
       )}
 
       <Card title="Catálogo de Productos">

@@ -8,16 +8,23 @@ import { Input } from '../../components/ui/Input';
 import { usePurchases } from '../../hooks/usePurchases';
 import { useProducts } from '../../hooks/useProducts';
 import { db } from '../../lib/supabase';
+import { ProductForm } from '../../components/ProductForm';
 import styles from './page.module.css';
 
 export default function Compras() {
   const { processPurchase, fetchPurchases, loading } = usePurchases();
-  const { products } = useProducts();
+  const { products, addProduct } = useProducts();
 
   const [partners, setPartners] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  
+  // Barcode scanner states
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [showNewProductModal, setShowNewProductModal] = useState(false);
+  const [newProductBarcode, setNewProductBarcode] = useState('');
+  const [savingProduct, setSavingProduct] = useState(false);
 
   // Cabecera de la compra
   const [header, setHeader] = useState({
@@ -60,10 +67,66 @@ export default function Compras() {
       // Auto-completar precio de costo cuando se selecciona un producto
       if (field === 'product_id' && value) {
         const prod = products.find(p => p.id === value);
-        return { ...item, product_id: value, unit_price: prod ? prod.cost_price : 0 };
+        return { ...item, product_id: value, unit_price: prod ? prod.cost_price : 0, quantity: 1 };
       }
       return { ...item, [field]: value };
     }));
+  };
+
+  const handleBarcodeSubmit = (e) => {
+    e.preventDefault();
+    if (!barcodeInput.trim()) return;
+    
+    const barcode = barcodeInput.trim();
+    const product = products.find(p => p.barcode === barcode);
+    
+    if (product) {
+      // Check if already in items
+      const existingIdx = items.findIndex(i => i.product_id === product.id);
+      if (existingIdx >= 0) {
+        // Increment quantity
+        updateItem(existingIdx, 'quantity', parseInt(items[existingIdx].quantity || 0) + 1);
+      } else {
+        // Find an empty item row, or add a new one
+        const emptyIdx = items.findIndex(i => !i.product_id);
+        if (emptyIdx >= 0) {
+           updateItem(emptyIdx, 'product_id', product.id);
+        } else {
+           setItems(prev => [...prev, { product_id: product.id, quantity: 1, unit_price: product.cost_price }]);
+        }
+      }
+      setBarcodeInput('');
+    } else {
+      // Not found, open create product modal
+      setNewProductBarcode(barcode);
+      setShowNewProductModal(true);
+      setBarcodeInput('');
+    }
+  };
+
+  const handleAddProduct = async (formData) => {
+    try {
+      setSavingProduct(true);
+      const newProducts = await addProduct(formData);
+      if (newProducts && newProducts.length > 0) {
+        const product = newProducts[0];
+        // Add newly created product to items
+        const emptyIdx = items.findIndex(i => !i.product_id);
+        if (emptyIdx >= 0) {
+           setItems(prev => prev.map((item, i) => 
+             i === emptyIdx ? { ...item, product_id: product.id, unit_price: product.cost_price, quantity: 1 } : item
+           ));
+        } else {
+           setItems(prev => [...prev, { product_id: product.id, quantity: 1, unit_price: product.cost_price }]);
+        }
+      }
+      setShowNewProductModal(false);
+      setMessage({ type: 'success', text: 'Producto creado y agregado a la compra.' });
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Error al agregar producto: ' + err.message });
+    } finally {
+      setSavingProduct(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -160,9 +223,19 @@ export default function Compras() {
 
             {/* Ítems */}
             <div style={{ marginTop: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <strong>Productos a ingresar</strong>
-                <Button type="button" variant="secondary" onClick={addItem}>+ Agregar Producto</Button>
+                <div style={{ display: 'flex', gap: '0.5rem', flex: '1', maxWidth: '400px' }}>
+                  <Input 
+                    placeholder="Escanear o ingresar código de barras..." 
+                    value={barcodeInput}
+                    onChange={e => setBarcodeInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' ? handleBarcodeSubmit(e) : null}
+                    style={{ flex: 1, marginBottom: 0 }}
+                  />
+                  <Button type="button" onClick={handleBarcodeSubmit}>Buscar</Button>
+                </div>
+                <Button type="button" variant="secondary" onClick={addItem}>+ Agregar Fila</Button>
               </div>
 
               {items.map((item, idx) => (
@@ -228,6 +301,25 @@ export default function Compras() {
             </div>
           </form>
         </Card>
+      )}
+
+      {/* Modal para Nuevo Producto */}
+      {showNewProductModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{ width: '100%', maxWidth: '600px', padding: '1rem' }}>
+            <ProductForm 
+              title="Producto no encontrado - Crear Nuevo"
+              initialData={{ barcode: newProductBarcode }}
+              onSubmit={handleAddProduct}
+              onCancel={() => setShowNewProductModal(false)}
+              isLoading={savingProduct}
+            />
+          </div>
+        </div>
       )}
 
       <Card title="Historial de Compras">
