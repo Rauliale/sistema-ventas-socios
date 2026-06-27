@@ -35,11 +35,11 @@ export function ProductForm({ initialData = {}, onSubmit, onCancel, isLoading = 
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const { profit_margin, ...dataToSubmit } = formData;
     onSubmit({
-      ...formData,
+      ...dataToSubmit,
       cost_price: parseFloat(formData.cost_price),
-      sale_price: parseFloat(formData.sale_price),
-      profit_margin: parseFloat(formData.profit_margin)
+      sale_price: parseFloat(formData.sale_price)
     });
   };
 
