@@ -29,6 +29,7 @@ export default function Productos() {
     { header: 'Nombre', accessor: 'name' },
     { header: 'Costo ($)', accessor: 'cost_price' },
     { header: 'Venta ($)', accessor: 'sale_price' },
+    { header: 'Stock Actual', accessor: 'stock' },
     { header: 'Stock Mínimo', accessor: 'min_stock' }
   ];
 

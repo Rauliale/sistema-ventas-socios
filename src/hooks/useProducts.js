@@ -9,8 +9,21 @@ export function useProducts() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const data = await db.get('products', { order: { column: 'name', ascending: true } });
-      setProducts(data);
+      const { supabase } = await import('../lib/supabase');
+      const { data, error: fetchErr } = await supabase
+        .from('products')
+        .select('*, product_lots(quantity)')
+        .order('name', { ascending: true });
+      
+      if (fetchErr) throw new Error(fetchErr.message);
+      
+      // Calculate total stock from lots
+      const productsWithStock = data.map(product => {
+        const totalStock = product.product_lots?.reduce((sum, lot) => sum + (lot.quantity || 0), 0) || 0;
+        return { ...product, stock: totalStock };
+      });
+      
+      setProducts(productsWithStock);
       setError(null);
     } catch (err) {
       setError(err.message);
