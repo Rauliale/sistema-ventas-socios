@@ -45,54 +45,62 @@ export function ProductForm({ initialData = {}, onSubmit, onCancel, isLoading = 
 
   return (
     <Card title={title} style={{ marginBottom: '1rem' }}>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-        <Input 
-          label="Nombre *" 
-          value={formData.name} 
-          onChange={e => setFormData({...formData, name: e.target.value})} 
-          required 
-          style={{flex: '1 1 100%'}} 
-        />
-        <Input 
-          label="Código de Barras" 
-          value={formData.barcode} 
-          onChange={e => setFormData({...formData, barcode: e.target.value})} 
-          style={{flex: '1 1 200px'}} 
-        />
-        <Input 
-          label="SKU" 
-          value={formData.sku} 
-          onChange={e => setFormData({...formData, sku: e.target.value})} 
-          style={{flex: '1 1 200px'}} 
-        />
-        <Input 
-          label="Costo ($) *" 
-          type="number" 
-          step="0.01" 
-          value={formData.cost_price} 
-          onChange={e => handleCostOrMarginChange('cost_price', e.target.value)} 
-          required 
-          style={{flex: '1 1 120px'}} 
-        />
-        <Input 
-          label="Ganancia (%)" 
-          type="number" 
-          step="0.01" 
-          value={formData.profit_margin} 
-          onChange={e => handleCostOrMarginChange('profit_margin', e.target.value)} 
-          style={{flex: '1 1 120px'}} 
-        />
-        <Input 
-          label="Venta ($) *" 
-          type="number" 
-          step="0.01" 
-          value={formData.sale_price} 
-          onChange={e => handleSalePriceChange(e.target.value)} 
-          required 
-          style={{flex: '1 1 120px'}} 
-        />
+      <form onSubmit={handleSubmit}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <Input 
+              label="Nombre *" 
+              value={formData.name} 
+              onChange={e => setFormData({...formData, name: e.target.value})} 
+              required 
+            />
+          </div>
+          <div>
+            <Input 
+              label="Código de Barras" 
+              value={formData.barcode} 
+              onChange={e => setFormData({...formData, barcode: e.target.value})} 
+            />
+          </div>
+          <div>
+            <Input 
+              label="SKU" 
+              value={formData.sku} 
+              onChange={e => setFormData({...formData, sku: e.target.value})} 
+            />
+          </div>
+          <div>
+            <Input 
+              label="Costo ($) *" 
+              type="number" 
+              step="0.01" 
+              value={formData.cost_price} 
+              onChange={e => handleCostOrMarginChange('cost_price', e.target.value)} 
+              required 
+            />
+          </div>
+          <div>
+            <Input 
+              label="Ganancia (%)" 
+              type="number" 
+              step="0.01" 
+              value={formData.profit_margin} 
+              onChange={e => handleCostOrMarginChange('profit_margin', e.target.value)} 
+            />
+          </div>
+          <div>
+            <Input 
+              label="Venta ($) *" 
+              type="number" 
+              step="0.01" 
+              value={formData.sale_price} 
+              onChange={e => handleSalePriceChange(e.target.value)} 
+              required 
+            />
+          </div>
+        </div>
         
-        <div style={{ width: '100%', marginTop: '1rem', display: 'flex', gap: '1rem' }}>
+        <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem' }}>
           <Button type="submit" isLoading={isLoading}>Guardar Producto</Button>
           {onCancel && (
             <Button type="button" variant="secondary" onClick={onCancel} disabled={isLoading}>
