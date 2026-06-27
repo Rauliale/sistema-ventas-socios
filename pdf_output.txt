@@ -1,0 +1,463 @@
+Sistema de Gestión de Ventas, Stock y
+Participación de Socios
+1. Descripción General
+Desarrollar un sistema web para un negocio de venta de productos informáticos.
+El negocio posee dos socios:
+Raúl Añais
+Nahuel Añais
+Cada socio puede comprar e ingresar mercadería utilizando su propio capital.
+El sistema debe permitir:
+Control de stock.
+Registro de compras.
+Registro de ventas.
+Lectura de códigos de barras.
+Control de gastos.
+Control de ganancias por socio.
+Reportes financieros.
+Historial completo de movimientos.
+Tecnologías objetivo:
+Frontend: Next.js
+Backend: Supabase
+Base de datos: PostgreSQL (Supabase)
+Hosting: Vercel
+Autenticación: Supabase Auth
+2. Concepto Principal del Negocio
+Cada producto en stock debe tener un propietario.
+Ejemplo:
+Nahuel compra 10 mouse.
+Raúl compra 5 teclados.
+Cuando se vende un mouse:
+Disminuye el stock.
+La venta queda registrada.• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+1
+La ganancia se asigna automáticamente a Nahuel.
+Cuando se vende un teclado:
+Disminuye el stock.
+La venta queda registrada.
+La ganancia se asigna automáticamente a Raúl.
+El sistema debe permitir conocer en cualquier momento:
+Cuánto dinero invirtió cada socio.
+Cuánto stock posee cada socio.
+Cuánto vendió cada socio.
+Cuánto ganó cada socio.
+Cuánto dinero puede retirar cada socio.
+3. Módulo de Usuarios
+Roles
+Administrador
+Puede:
+Gestionar productos.
+Gestionar ventas.
+Gestionar compras.
+Gestionar gastos.
+Ver reportes.
+Crear usuarios.
+Vendedor
+Puede:
+Realizar ventas.
+Consultar stock.
+Escanear productos.
+No puede:
+Modificar compras.
+Modificar gastos.
+Acceder a reportes financieros.• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+2
+4. Módulo de Productos
+Datos del Producto
+ID
+Código de barras
+SKU
+Nombre
+Descripción
+Categoría
+Marca
+Precio de costo
+Precio de venta
+Stock actual
+Stock mínimo
+Estado (activo/inactivo)
+Fecha de creación
+Funciones
+Alta de producto
+Edición
+Baja lógica
+Búsqueda rápida
+Búsqueda por código de barras
+Búsqueda por nombre
+5. Módulo de Inventario por Propietario
+El sistema debe permitir que un mismo producto tenga stock perteneciente a distintos socios.
+Ejemplo:
+Producto: Mouse Logitech M90
+Lote 1:
+Propietario: Nahuel
+Cantidad: 10
+Costo unitario: $5.000
+Lote 2:
+Propietario: Raúl
+Cantidad: 5
+Costo unitario: $5.200
+Stock total mostrado: 15 unidades• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+3
+Internamente el sistema debe mantener cada lote separado.
+6. Módulo de Compras
+Registrar ingresos de mercadería.
+Campos:
+Fecha
+Producto
+Cantidad
+Precio unitario
+Costo total
+Proveedor
+Propietario (Raúl o Nahuel)
+Factura
+Observaciones
+Al guardar:
+Incrementar stock.
+Registrar inversión del socio.
+7. Módulo de Ventas
+Venta rápida
+Compatible con lector de código de barras USB.
+Flujo:
+Escanear producto.
+Agregar al carrito.
+Modificar cantidad si corresponde.
+Seleccionar método de pago.
+Confirmar venta.
+Métodos de pago
+Efectivo
+Transferencia
+Débito
+Crédito
+Mercado Pago
+Cuenta corriente• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+1. 
+2. 
+3. 
+4. 
+5. 
+• 
+• 
+• 
+• 
+• 
+• 
+4
+Datos almacenados
+Número de venta
+Fecha y hora
+Usuario vendedor
+Cliente
+Productos vendidos
+Cantidades
+Precio unitario
+Total
+Método de pago
+8. Asignación Automática de Ganancias
+Al vender un producto:
+El sistema debe descontar stock usando FIFO.
+Ejemplo:
+Stock Mouse:
+Nahuel: 10 unidades
+Raúl: 5 unidades
+Se venden 3 unidades.
+Resultado:
+Nahuel: 7 unidades
+Ganancia registrada: Nahuel recibe la utilidad correspondiente.
+Si se venden 12 unidades:
+Primero consume:
+10 de Nahuel
+Luego:
+2 de Raúl
+La ganancia debe dividirse automáticamente.• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+5
+9. Cálculo Financiero por Socio
+Para cada socio mostrar:
+Inversión Total
+Suma de todas las compras realizadas.
+Stock Valorizado
+Valor actual del stock.
+Ventas Totales
+Importe vendido.
+Costo de Mercadería Vendida
+Costo real de los productos vendidos.
+Ganancia Bruta
+Ventas - Costos.
+Gastos Compartidos
+Porcentaje de gastos asignados.
+Ganancia Neta
+Ganancia Bruta - Gastos.
+10. Módulo de Gastos
+Registrar gastos del negocio.
+Campos:
+Fecha
+Tipo
+Descripción
+Importe
+Comprobante• 
+• 
+• 
+• 
+• 
+6
+Categorías:
+Alquiler
+Luz
+Internet
+Agua
+Impuestos
+Sueldos
+Marketing
+Otros
+11. Distribución de Gastos
+Configurable.
+Opciones:
+Reparto 50/50
+Cada socio paga la mitad.
+Reparto por porcentaje
+Ejemplo:
+Raúl 60%
+Nahuel 40%
+Reparto por ventas
+Se distribuye según porcentaje vendido.
+12. Reportes
+Reporte Diario
+Ventas del día
+Ganancias
+Gastos
+Reporte Mensual
+Ventas
+Costos
+Utilidades• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+7
+Reporte por Socio
+Inversión
+Stock
+Ventas
+Ganancia
+Gastos asignados
+Reporte de Productos
+Más vendidos
+Menos vendidos
+Sin movimiento
+13. Dashboard Principal
+Mostrar:
+Ventas del día
+Ventas del mes
+Stock total
+Productos con stock bajo
+Ganancia de Raúl
+Ganancia de Nahuel
+Gastos del mes
+Utilidad neta del negocio
+14. Clientes
+Campos:
+Nombre
+Teléfono
+Email
+Dirección
+Observaciones
+Funciones:
+Historial de compras
+Cuenta corriente• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+8
+15. Auditoría
+Registrar:
+Usuario
+Acción realizada
+Fecha
+Hora
+Datos modificados
+Ejemplos:
+Venta eliminada
+Producto modificado
+Compra corregida
+16. Base de Datos (Supabase)
+Tablas principales:
+users
+partners
+products
+product_lots
+purchases
+purchase_items
+sales
+sale_items
+expenses
+expense_categories
+customers
+suppliers
+inventory_movements
+financial_movements
+audit_logs
+17. Funcionalidades Futuras
+Integración con Mercado Libre.
+Integración con Mercado Pago.
+Aplicación móvil.
+Impresión de tickets.
+Facturación electrónica AFIP/ARCA.
+Control de garantías.
+Control de reparaciones técnicas.
+Múltiples sucursales.• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+9
+18. Requisitos No Funcionales
+Diseño responsive.
+Compatible con PC y celular .
+Compatible con lectores de código de barras USB.
+Copias de seguridad automáticas.
+Tiempo de respuesta menor a 2 segundos.
+Exportación a Excel y PDF.
+Seguridad mediante roles y permisos.
+Registro de auditoría completo.• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+10
