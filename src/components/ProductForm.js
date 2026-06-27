@@ -10,7 +10,8 @@ export function ProductForm({ initialData = {}, onSubmit, onCancel, isLoading = 
     sku: initialData.sku || '',
     cost_price: initialData.cost_price || 0,
     profit_margin: initialData.profit_margin || 0,
-    sale_price: initialData.sale_price || 0
+    sale_price: initialData.sale_price || 0,
+    min_stock: initialData.min_stock || 0
   });
 
   // Calculate sale price when cost or profit margin changes
@@ -44,7 +45,8 @@ export function ProductForm({ initialData = {}, onSubmit, onCancel, isLoading = 
       ...dataToSubmit,
       sku: finalSku,
       cost_price: parseFloat(formData.cost_price),
-      sale_price: parseFloat(formData.sale_price)
+      sale_price: parseFloat(formData.sale_price),
+      min_stock: parseInt(formData.min_stock, 10) || 0
     });
   };
 
@@ -101,6 +103,15 @@ export function ProductForm({ initialData = {}, onSubmit, onCancel, isLoading = 
               value={formData.sale_price} 
               onChange={e => handleSalePriceChange(e.target.value)} 
               required 
+            />
+          </div>
+          <div>
+            <Input 
+              label="Stock Mínimo" 
+              type="number" 
+              step="1" 
+              value={formData.min_stock} 
+              onChange={e => setFormData({...formData, min_stock: e.target.value})} 
             />
           </div>
         </div>

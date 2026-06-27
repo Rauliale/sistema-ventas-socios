@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS products (
   brand       TEXT,
   cost_price  NUMERIC NOT NULL DEFAULT 0,
   sale_price  NUMERIC NOT NULL DEFAULT 0,
+  supplier_url TEXT,
   min_stock   INT NOT NULL DEFAULT 0,
   active      BOOLEAN NOT NULL DEFAULT TRUE,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -336,6 +337,10 @@ BEGIN
 
     INSERT INTO inventory_movements (product_id, lot_id, partner_id, type, quantity, reason)
     VALUES (v_prod_id, v_lot_id, p_partner_id, 'IN', v_qty, 'Compra #' || v_purchase_id);
+    
+    IF p_supplier_url IS NOT NULL AND p_supplier_url <> '' THEN
+      UPDATE products SET supplier_url = p_supplier_url WHERE id = v_prod_id;
+    END IF;
   END LOOP;
 
   INSERT INTO financial_movements (partner_id, type, amount, related_id)
@@ -383,7 +388,7 @@ CREATE POLICY "auth_all" ON inventory_movements FOR ALL TO authenticated USING (
 CREATE POLICY "auth_all" ON audit_logs FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- =====================================================================
--- PRÉSTAMOS Y CUOTAS (AGENDA)
+-- PRï¿½STAMOS Y CUOTAS (AGENDA)
 -- =====================================================================
 
 CREATE TABLE IF NOT EXISTS loans (

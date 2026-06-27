@@ -30,7 +30,8 @@ export default function Compras() {
   const [header, setHeader] = useState({
     partner_id: '',
     invoice_number: '',
-    observations: ''
+    observations: '',
+    supplier_url: ''
   });
 
   // Ítems de la compra (lista dinámica)
@@ -145,6 +146,7 @@ export default function Compras() {
       await processPurchase({
         partnerId: header.partner_id,
         supplierId: null,
+        supplierUrl: header.supplier_url,
         invoiceNumber: header.invoice_number,
         observations: header.observations,
         items: items.map(i => ({
@@ -155,7 +157,7 @@ export default function Compras() {
       });
       setMessage({ type: 'success', text: 'Compra registrada con éxito. Stock actualizado.' });
       setShowForm(false);
-      setHeader({ partner_id: '', invoice_number: '', observations: '' });
+      setHeader({ partner_id: '', invoice_number: '', observations: '', supplier_url: '' });
       setItems([{ product_id: '', quantity: 1, unit_price: 0 }]);
       await loadPurchases();
     } catch (err) {
@@ -212,6 +214,12 @@ export default function Compras() {
                 value={header.invoice_number}
                 onChange={e => setHeader({ ...header, invoice_number: e.target.value })}
                 placeholder="Ej: A-0001-00012345"
+              />
+              <Input
+                label="Enlace del Proveedor (Opcional)"
+                value={header.supplier_url || ''}
+                onChange={e => setHeader({ ...header, supplier_url: e.target.value })}
+                placeholder="Ej: https://mercadolibre.com.ar/..."
               />
               <Input
                 label="Observaciones"
