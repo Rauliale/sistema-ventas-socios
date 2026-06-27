@@ -381,3 +381,64 @@ CREATE POLICY "auth_all" ON expenses FOR ALL TO authenticated USING (true) WITH 
 CREATE POLICY "auth_all" ON financial_movements FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "auth_all" ON inventory_movements FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "auth_all" ON audit_logs FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- =====================================================================
+-- PRÉSTAMOS Y CUOTAS (AGENDA)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS loans (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_id     UUID NOT NULL REFERENCES partners(id),
+  description    TEXT NOT NULL,
+  total_amount   NUMERIC NOT NULL DEFAULT 0,
+  date           TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS loan_installments (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  loan_id        UUID NOT NULL REFERENCES loans(id) ON DELETE CASCADE,
+  amount         NUMERIC NOT NULL DEFAULT 0,
+  due_date       DATE NOT NULL,
+  status         TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid')),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE loans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE loan_installments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "auth_all_loans" ON loans FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "auth_all_inst" ON loan_installments FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+CREATE OR REPLACE FUNCTION rpc_create_loan(
+  p_partner_id      UUID,
+  p_description     TEXT,
+  p_total_amount    NUMERIC,
+  p_installments    INT,
+  p_installment_amt NUMERIC,
+  p_first_due_date  DATE
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_loan_id UUID;
+  i INT;
+  v_current_due_date DATE;
+BEGIN
+  INSERT INTO loans (partner_id, description, total_amount, date)
+  VALUES (p_partner_id, p_description, p_total_amount, now())
+  RETURNING id INTO v_loan_id;
+
+  v_current_due_date := p_first_due_date;
+  FOR i IN 1..p_installments LOOP
+    INSERT INTO loan_installments (loan_id, amount, due_date, status)
+    VALUES (v_loan_id, p_installment_amt, v_current_due_date, 'pending');
+    
+    v_current_due_date := v_current_due_date + interval '1 month';
+  END LOOP;
+
+  RETURN v_loan_id;
+END;
+$$;
