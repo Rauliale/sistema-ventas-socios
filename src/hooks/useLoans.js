@@ -33,7 +33,11 @@ export function useLoans() {
       let filteredData = data || [];
       if (profile && profile.name) {
         // Filter out loans that do not belong to the logged-in user
-        filteredData = filteredData.filter(inst => inst.loans?.partners?.name === profile.name);
+        // Using includes() to handle cases where profile name is 'Raúl Añais' and partner name is 'Raúl'
+        filteredData = filteredData.filter(inst => {
+          const partnerName = inst.loans?.partners?.name || '';
+          return profile.name.includes(partnerName) || partnerName.includes(profile.name);
+        });
       }
       
       setInstallments(filteredData);
