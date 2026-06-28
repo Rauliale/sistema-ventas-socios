@@ -23,9 +23,17 @@ export default function Finanzas() {
           .select('*')
           .order('date', { ascending: false });
         
+        const typeTranslations = {
+          'investment': 'Inversión',
+          'expense': 'Gasto',
+          'profit': 'Ganancia',
+          'withdrawal': 'Retiro'
+        };
+
         const tableData = (data || []).map(m => ({
           ...m,
           partnerName: pMap[m.partner_id] || 'Desconocido',
+          typeTranslated: typeTranslations[m.type] || m.type,
           dateFmt: new Date(m.date).toLocaleString(),
           amountFmt: `$${m.amount.toFixed(2)}`
         }));
@@ -43,7 +51,7 @@ export default function Finanzas() {
   const columns = [
     { header: 'Fecha', accessor: 'dateFmt' },
     { header: 'Socio', accessor: 'partnerName' },
-    { header: 'Operación', accessor: 'type' },
+    { header: 'Operación', accessor: 'typeTranslated' },
     { header: 'Importe', accessor: 'amountFmt' }
   ];
 
