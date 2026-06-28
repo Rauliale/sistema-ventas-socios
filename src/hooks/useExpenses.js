@@ -81,11 +81,31 @@ export function useExpenses() {
     }
   };
 
+  const markExpenseAsPaid = async (expenseId) => {
+    try {
+      const { supabase } = await import('../lib/supabase');
+      const { error } = await supabase
+        .from('expenses')
+        .update({ status: 'paid' })
+        .eq('id', expenseId);
+        
+      if (error) throw new Error(error.message);
+      
+      setExpenses(prev => prev.map(exp => 
+        exp.id === expenseId ? { ...exp, status: 'paid' } : exp
+      ));
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
   return {
     expenses,
     categories,
     loading,
     error,
-    addExpense
+    addExpense,
+    markExpenseAsPaid
   };
 }

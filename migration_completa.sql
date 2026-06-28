@@ -139,6 +139,7 @@ CREATE TABLE IF NOT EXISTS expenses (
   receipt_url TEXT,
   date        TIMESTAMPTZ NOT NULL DEFAULT now(),
   shared_type TEXT NOT NULL DEFAULT '50/50',
+    status      TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid')),
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

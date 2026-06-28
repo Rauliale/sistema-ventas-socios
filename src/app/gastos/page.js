@@ -12,7 +12,7 @@ export default function Gastos() {
   const [activeTab, setActiveTab] = useState('gastos'); // 'gastos' | 'prestamos'
   
   // ================= EXPENDITURES STATE =================
-  const { expenses, categories, loading: loadingExp, addExpense } = useExpenses();
+  const { expenses, categories, loading: loadingExp, addExpense, markExpenseAsPaid } = useExpenses();
   const [showExpForm, setShowExpForm] = useState(false);
   const [expFormData, setExpFormData] = useState({
     description: '',
@@ -43,7 +43,17 @@ export default function Gastos() {
     { header: 'Categoría', accessor: 'categoryName', render: row => row.expense_categories?.name },
     { header: 'Descripción', accessor: 'description' },
     { header: 'Importe ($)', accessor: 'amount' },
-    { header: 'Distribución', accessor: 'shared_type' }
+    { header: 'Distribución', accessor: 'shared_type' },
+    { header: 'Estado', accessor: 'status', render: row => (
+        <span style={{ color: row.status === 'paid' ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 'bold' }}>
+          {row.status === 'paid' ? 'Saldado' : 'Pendiente'}
+        </span>
+    )},
+    { header: 'Acción', accessor: 'action', render: row => (
+        row.status === 'pending' ? (
+          <Button onClick={() => markExpenseAsPaid(row.id)}>Saldar</Button>
+        ) : null
+    )}
   ];
 
   // ================= LOANS STATE =================

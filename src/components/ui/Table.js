@@ -18,7 +18,7 @@ export function Table({ columns, data, emptyMessage = "No hay datos disponibles"
               <tr key={rowIdx} className={styles.tr}>
                 {columns.map((col, colIdx) => (
                   <td key={colIdx} className={styles.td}>
-                    {col.accessor ? row[col.accessor] : col.render(row)}
+                    {col.render ? col.render(row) : (col.accessor ? row[col.accessor] : null)}
                   </td>
                 ))}
               </tr>
