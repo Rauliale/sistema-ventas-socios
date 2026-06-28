@@ -51,6 +51,7 @@ function AppContent({ children }) {
           <Link href="/productos">📋 Productos</Link>
           <Link href="/gastos">💸 Gastos</Link>
           <Link href="/finanzas">📈 Finanzas</Link>
+          <Link href="/reportes-ventas">📊 Reportes Ventas</Link>
         </nav>
 
         <button 

@@ -448,3 +448,31 @@ BEGIN
   RETURN v_loan_id;
 END;
 $$;
+
+
+-- =====================================================================
+-- VISTA DE REPORTES DE VENTAS DETALLADOS
+-- =====================================================================
+
+CREATE OR REPLACE VIEW vw_sales_details AS
+SELECT 
+  s.id AS sale_id,
+  s.date AS sale_date,
+  s.sale_number,
+  im.partner_id,
+  p.name AS partner_name,
+  pr.name AS product_name,
+  pr.id AS product_id,
+  im.quantity AS sold_quantity,
+  si.unit_price AS sale_price,
+  pl.cost_price,
+  (im.quantity * si.unit_price) AS total_revenue,
+  (im.quantity * (si.unit_price - pl.cost_price)) AS net_profit
+FROM sales s
+JOIN sale_items si ON s.id = si.sale_id
+JOIN inventory_movements im ON im.product_id = si.product_id 
+     AND im.type = 'OUT' 
+     AND im.reason = 'Venta #' || s.id::text
+JOIN product_lots pl ON pl.id = im.lot_id
+JOIN partners p ON p.id = im.partner_id
+JOIN products pr ON pr.id = si.product_id;
