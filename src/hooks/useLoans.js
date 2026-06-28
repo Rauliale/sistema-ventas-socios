@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { db } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 export function useLoans() {
+  const { profile } = useAuth();
   const [installments, setInstallments] = useState([]);
   const [partners, setPartners] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +30,13 @@ export function useLoans() {
         
       if (fetchErr) throw new Error(fetchErr.message);
       
-      setInstallments(data || []);
+      let filteredData = data || [];
+      if (profile && profile.name) {
+        // Filter out loans that do not belong to the logged-in user
+        filteredData = filteredData.filter(inst => inst.loans?.partners?.name === profile.name);
+      }
+      
+      setInstallments(filteredData);
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -39,8 +47,10 @@ export function useLoans() {
 
   useEffect(() => {
     fetchPartners();
-    fetchInstallments();
-  }, []);
+    if (profile) {
+      fetchInstallments();
+    }
+  }, [profile]);
 
   const createLoan = async (payload) => {
     try {
