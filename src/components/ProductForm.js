@@ -23,11 +23,26 @@ export function ProductForm({ initialData = {}, onSubmit, onCancel, isLoading = 
     setFormData({ ...newFormData, sale_price: sale.toFixed(2) });
   };
 
-  // Calculate profit margin when sale price changes
+  // Calculate profit margin or cost price when sale price changes
   const handleSalePriceChange = (value) => {
     const sale = parseFloat(value) || 0;
-    const cost = parseFloat(formData.cost_price) || 0;
-    let margin = 0;
+    let cost = parseFloat(formData.cost_price) || 0;
+    let margin = parseFloat(formData.profit_margin) || 0;
+
+    // Si se carga precio de venta directamente sin tener costo previo
+    if (cost === 0 && sale > 0) {
+      margin = 100;
+      cost = sale / 2;
+      setFormData({ 
+        ...formData, 
+        sale_price: value, 
+        profit_margin: margin.toFixed(2),
+        cost_price: cost.toFixed(2)
+      });
+      return;
+    }
+
+    // Comportamiento normal: ajusta el margen de ganancia si ya existe un costo
     if (cost > 0) {
       margin = ((sale - cost) / cost) * 100;
     }
