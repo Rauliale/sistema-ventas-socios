@@ -47,12 +47,32 @@ export function useProducts() {
     }
   };
 
+  const updateProduct = async (id, payload) => {
+    try {
+      const { supabase } = await import('../lib/supabase');
+      const { data, error } = await supabase
+        .from('products')
+        .update(payload)
+        .eq('id', id)
+        .select();
+
+      if (error) throw new Error(error.message);
+      
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, ...payload } : p));
+      return data;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
   return {
     products,
     loading,
     error,
     fetchProducts,
-    addProduct
+    addProduct,
+    updateProduct
   };
 }
 

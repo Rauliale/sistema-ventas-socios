@@ -8,20 +8,36 @@ import { useProducts } from '../../hooks/useProducts';
 import { ProductForm } from '../../components/ProductForm';
 
 export default function Productos() {
-  const { products, loading, addProduct } = useProducts();
+  const { products, loading, addProduct, updateProduct } = useProducts();
   const [showForm, setShowForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   const [saving, setSaving] = useState(false);
   
-  const handleAddProduct = async (formData) => {
+  const handleEditClick = (product) => {
+    setEditingProduct(product);
+    setShowForm(true);
+  };
+
+  const handleSaveProduct = async (formData) => {
     try {
       setSaving(true);
-      await addProduct(formData);
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, formData);
+      } else {
+        await addProduct(formData);
+      }
       setShowForm(false);
+      setEditingProduct(null);
     } catch (err) {
-      alert("Error al agregar producto: " + err.message);
+      alert("Error al guardar producto: " + err.message);
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCancel = () => {
+    setShowForm(false);
+    setEditingProduct(null);
   };
 
   const columns = [
@@ -30,22 +46,26 @@ export default function Productos() {
     { header: 'Costo ($)', accessor: 'cost_price' },
     { header: 'Venta ($)', accessor: 'sale_price' },
     { header: 'Stock Actual', accessor: 'stock' },
-    { header: 'Stock Mínimo', accessor: 'min_stock' }
+    { header: 'Stock Mínimo', accessor: 'min_stock' },
+    { header: 'Acción', render: row => <Button onClick={() => handleEditClick(row)}>Editar</Button> }
   ];
 
   return (
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1>Gestión de Productos</h1>
-        <Button onClick={() => setShowForm(!showForm)}>
-          {showForm ? 'Cancelar' : 'Nuevo Producto'}
+        <Button onClick={() => { setEditingProduct(null); setShowForm(!showForm); }}>
+          {showForm && !editingProduct ? 'Cancelar' : 'Nuevo Producto'}
         </Button>
       </div>
 
       {showForm && (
         <ProductForm 
-          onSubmit={handleAddProduct} 
-          onCancel={() => setShowForm(false)} 
+          key={editingProduct ? editingProduct.id : 'new'}
+          title={editingProduct ? "Editar Producto" : "Agregar Producto"}
+          initialData={editingProduct || {}}
+          onSubmit={handleSaveProduct} 
+          onCancel={handleCancel} 
           isLoading={saving} 
         />
       )}
