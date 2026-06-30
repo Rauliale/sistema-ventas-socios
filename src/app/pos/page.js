@@ -15,23 +15,47 @@ export default function PointOfSale() {
   const { user } = useAuth();
 
   const [barcode, setBarcode] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
   const [cart, setCart] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
   const [message, setMessage] = useState({ type: '', text: '' });
+
+  const handleBarcodeChange = (e) => {
+    const val = e.target.value;
+    setBarcode(val);
+    
+    if (val.length > 1) {
+      const lowerVal = val.toLowerCase();
+      const matches = products.filter(p => 
+        p.name.toLowerCase().includes(lowerVal) || 
+        (p.barcode && p.barcode.toLowerCase().includes(lowerVal)) || 
+        (p.sku && p.sku.toLowerCase().includes(lowerVal))
+      );
+      setSuggestions(matches.slice(0, 8)); // Mostrar top 8 coincidencias
+    } else {
+      setSuggestions([]);
+    }
+  };
 
   const handleBarcodeScan = (e) => {
     e.preventDefault();
     if (!barcode) return;
     
-    // Find product
-    const prod = products.find(p => p.barcode === barcode || p.sku === barcode);
+    // Si solo hay un match o escriben el código exacto, agregarlo
+    const prod = products.find(p => 
+      p.barcode === barcode || 
+      p.sku === barcode || 
+      p.name.toLowerCase() === barcode.toLowerCase()
+    );
+    
     if (!prod) {
-      setMessage({ type: 'error', text: 'Producto no encontrado' });
+      setMessage({ type: 'error', text: 'Producto no encontrado o sea más específico' });
       return;
     }
 
     addToCart(prod);
     setBarcode('');
+    setSuggestions([]);
     setMessage({ type: '', text: '' });
   };
 
@@ -53,6 +77,8 @@ export default function PointOfSale() {
         total_price: product.sale_price
       }];
     });
+    setBarcode('');
+    setSuggestions([]);
   };
 
   const updateQuantity = (id, delta) => {
@@ -74,11 +100,6 @@ export default function PointOfSale() {
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     try {
-      // In a real app we get the actual seller ID. For now we use a dummy or null
-      // The RPC expects a UUID for seller. We'll pass a random UUID or handle it in RPC.
-      // Wait, let's fetch an admin or seller profile or just ignore seller for now
-      // Actually we need a valid seller_id according to schema, so we should fetch one.
-      
       await processSale(user?.id, null, paymentMethod, cart.map(i => ({
         product_id: i.product_id,
         quantity: i.quantity,
@@ -99,23 +120,34 @@ export default function PointOfSale() {
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
         <div>
           <Card title="Escanear Producto">
-            <form onSubmit={handleBarcodeScan} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
-              <div style={{ flex: 1 }}>
+            <form onSubmit={handleBarcodeScan} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', position: 'relative' }}>
+              <div style={{ flex: 1, position: 'relative' }}>
                 <Input 
-                  label="Código de Barras / SKU" 
+                  label="Código de Barras / SKU / Nombre" 
                   value={barcode}
-                  onChange={(e) => setBarcode(e.target.value)}
-                  placeholder="Escanea o escribe el código..."
+                  onChange={handleBarcodeChange}
+                  placeholder="Escanea o escribe el nombre/código..."
                   disabled={productsLoading}
                   autoFocus
                 />
+                
+                {suggestions.length > 0 && (
+                  <ul className={styles.suggestionsList}>
+                    {suggestions.map(p => (
+                      <li key={p.id} onClick={() => addToCart(p)}>
+                        <span>{p.name}</span>
+                        <strong>${Number(p.sale_price).toFixed(2)}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
               <Button type="submit" disabled={productsLoading || !barcode}>
                 Agregar
               </Button>
             </form>
             {message.text && (
-              <div style={{ marginTop: '1rem', color: message.type === 'error' ? 'var(--color-danger)' : 'var(--color-secondary)' }}>
+              <div style={{ marginTop: '1rem', color: message.type === 'error' ? 'var(--color-danger)' : 'var(--color-success)' }}>
                 {message.text}
               </div>
             )}

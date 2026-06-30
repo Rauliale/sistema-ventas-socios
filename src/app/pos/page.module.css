@@ -37,3 +37,36 @@
   margin-top: var(--spacing-xs);
   margin-bottom: var(--spacing-md);
 }
+
+.suggestionsList {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0 0;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.suggestionsList li {
+  padding: 10px 15px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.suggestionsList li:last-child {
+  border-bottom: none;
+}
+
+.suggestionsList li:hover {
+  background: var(--color-background);
+}
