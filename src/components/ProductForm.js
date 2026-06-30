@@ -56,12 +56,14 @@ export function ProductForm({ initialData = {}, onSubmit, onCancel, isLoading = 
     e.preventDefault();
     const { profit_margin, ...dataToSubmit } = formData;
     
-    // Auto-generate SKU if left empty
+    // Auto-generate SKU and Barcode if left empty
     const finalSku = dataToSubmit.sku?.trim() || `SKU-${Date.now()}`;
+    const finalBarcode = dataToSubmit.barcode?.trim() || Date.now().toString();
     
     onSubmit({
       ...dataToSubmit,
       sku: finalSku,
+      barcode: finalBarcode,
       cost_price: parseFloat(formData.cost_price),
       sale_price: parseFloat(formData.sale_price),
       min_stock: parseInt(formData.min_stock, 10) || 0
