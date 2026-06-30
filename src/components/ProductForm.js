@@ -28,9 +28,12 @@ export function ProductForm({ initialData = {}, onSubmit, onCancel, isLoading = 
     const sale = parseFloat(value) || 0;
     let cost = parseFloat(formData.cost_price) || 0;
     let margin = parseFloat(formData.profit_margin) || 0;
+    const oldSale = parseFloat(formData.sale_price) || 0;
 
-    // Si se carga precio de venta directamente sin tener costo previo
-    if (cost === 0 && sale > 0) {
+    // Detectar si estamos en medio de un cálculo automático por tipeo continuo
+    const isAutoCalculated = cost === 0 || (margin === 100 && Math.abs(cost - oldSale / 2) < 0.02);
+
+    if (isAutoCalculated) {
       margin = 100;
       cost = sale / 2;
       setFormData({ 
@@ -42,7 +45,7 @@ export function ProductForm({ initialData = {}, onSubmit, onCancel, isLoading = 
       return;
     }
 
-    // Comportamiento normal: ajusta el margen de ganancia si ya existe un costo
+    // Comportamiento normal: ajusta el margen de ganancia si ya existe un costo fijo
     if (cost > 0) {
       margin = ((sale - cost) / cost) * 100;
     }
