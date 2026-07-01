@@ -124,31 +124,44 @@ export default function StatisticsPage() {
 
             <div>
               <h2 className={styles.sectionTitle}>Inversión en Compras (Por Socio)</h2>
-              <div className={styles.tableContainer}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Socio Inversor</th>
-                      <th>Capital Aportado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(stats.partnerInvestments).length === 0 ? (
-                      <tr>
-                        <td colSpan="2" style={{ textAlign: 'center' }}>No hay compras registradas en este período</td>
-                      </tr>
-                    ) : (
-                      Object.entries(stats.partnerInvestments).map(([partner, amount]) => (
-                        <tr key={partner}>
-                          <td><strong>{partner}</strong></td>
-                          <td style={{ color: 'var(--color-danger)', fontWeight: 'bold' }}>
-                            {formatCurrency(amount)}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+              <div className={styles.tableContainer} style={{ padding: '1rem' }}>
+                {Object.entries(stats.partnerInvestments).length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '1rem' }}>No hay compras registradas en este período</div>
+                ) : (
+                  <div>
+                    {(() => {
+                      const totalInvestment = Object.values(stats.partnerInvestments).reduce((a, b) => a + b, 0);
+                      
+                      return Object.entries(stats.partnerInvestments).map(([partner, amount], index) => {
+                        const percentage = totalInvestment > 0 ? ((amount / totalInvestment) * 100).toFixed(1) : 0;
+                        const colors = ['var(--color-primary)', 'var(--color-success)', 'var(--color-warning)'];
+                        const color = colors[index % colors.length];
+
+                        return (
+                          <div key={partner} style={{ marginBottom: '1.5rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                              <strong>{partner}</strong>
+                              <div style={{ textAlign: 'right' }}>
+                                <span style={{ fontWeight: 'bold', marginRight: '1rem' }}>{percentage}%</span>
+                                <span style={{ color: 'var(--color-text-secondary)' }}>{formatCurrency(amount)}</span>
+                              </div>
+                            </div>
+                            <div style={{ width: '100%', backgroundColor: 'var(--color-background)', height: '12px', borderRadius: '6px', overflow: 'hidden' }}>
+                              <div 
+                                style={{ 
+                                  width: `${percentage}%`, 
+                                  backgroundColor: color, 
+                                  height: '100%',
+                                  transition: 'width 0.5s ease-in-out'
+                                }} 
+                              />
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                )}
               </div>
             </div>
           </div>
