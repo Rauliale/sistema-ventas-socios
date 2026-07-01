@@ -7,18 +7,26 @@ import { Button } from '../../components/ui/Button';
 import { useProducts } from '../../hooks/useProducts';
 import { useSales } from '../../hooks/useSales';
 import { useAuth } from '../../context/AuthContext';
+import { useCashRegister } from '../../hooks/useCashRegister';
 import styles from './page.module.css';
 
 export default function PointOfSale() {
   const { products, loading: productsLoading } = useProducts();
   const { processSale, loading: saleLoading } = useSales();
   const { user } = useAuth();
+  
+  const { activeRegister, loading: registerLoading, openRegister, closeRegister, getClosurePreview } = useCashRegister();
 
   const [barcode, setBarcode] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [cart, setCart] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
   const [message, setMessage] = useState({ type: '', text: '' });
+  
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [initialCash, setInitialCash] = useState('');
+  const [actualCash, setActualCash] = useState('');
+  const [closurePreview, setClosurePreview] = useState(null);
 
   const handleBarcodeChange = (e) => {
     const val = e.target.value;
@@ -113,9 +121,106 @@ export default function PointOfSale() {
     }
   };
 
+  if (registerLoading) return <div className="page-container">Cargando estado de caja...</div>;
+
+  if (!activeRegister) {
+    return (
+      <div className="page-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <Card title="Apertura de Caja" style={{ maxWidth: '400px', width: '100%', textAlign: 'center' }}>
+          <p style={{ marginBottom: '1rem', color: 'var(--color-text-secondary)' }}>
+            Debes abrir la caja para poder registrar ventas en este turno.
+          </p>
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            await openRegister(initialCash);
+          }}>
+            <Input 
+              label="Efectivo Inicial (Cambio)" 
+              type="number" 
+              step="0.01" 
+              value={initialCash} 
+              onChange={e => setInitialCash(e.target.value)} 
+              required 
+              autoFocus
+            />
+            <Button type="submit" style={{ width: '100%', marginTop: '1.5rem' }}>
+              Abrir Caja
+            </Button>
+          </form>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="page-container">
-      <h1>Punto de Venta</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h1>Punto de Venta</h1>
+        <Button variant="danger" onClick={async () => {
+          const preview = await getClosurePreview();
+          setClosurePreview(preview);
+          setShowCloseModal(true);
+        }}>
+          Cerrar Caja
+        </Button>
+      </div>
+
+      {showCloseModal && closurePreview && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+          display: 'flex', justifyContent: 'center', alignItems: 'center'
+        }}>
+          <Card title="Arqueo y Cierre de Caja" style={{ minWidth: '400px' }}>
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span>Fondo Inicial:</span>
+                <strong>${closurePreview.initialCash.toFixed(2)}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span>Ventas en Efectivo:</span>
+                <strong style={{ color: 'var(--color-success)' }}>+ ${closurePreview.totalCashSales.toFixed(2)}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
+                <span>Efectivo Esperado en Cajón:</span>
+                <strong style={{ fontSize: '1.2rem' }}>${closurePreview.expectedCash.toFixed(2)}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                <span>Total Transferencias/Tarjetas:</span>
+                <strong style={{ color: 'var(--color-primary)' }}>${closurePreview.totalTransferSales.toFixed(2)}</strong>
+              </div>
+            </div>
+
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              await closeRegister(activeRegister.id, actualCash);
+              setShowCloseModal(false);
+              setActualCash('');
+            }}>
+              <Input 
+                label="Efectivo Real Contado" 
+                type="number" 
+                step="0.01" 
+                value={actualCash} 
+                onChange={e => setActualCash(e.target.value)} 
+                required 
+                autoFocus
+              />
+              {actualCash !== '' && (
+                <div style={{ marginTop: '1rem', textAlign: 'center', fontWeight: 'bold', 
+                  color: (parseFloat(actualCash) - closurePreview.expectedCash) === 0 ? 'var(--color-success)' : 'var(--color-danger)'
+                }}>
+                  Diferencia: ${(parseFloat(actualCash) - closurePreview.expectedCash).toFixed(2)}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                <Button type="submit" variant="danger" style={{ flex: 1 }}>Confirmar Cierre</Button>
+                <Button type="button" variant="secondary" onClick={() => setShowCloseModal(false)}>Cancelar</Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
         <div>
