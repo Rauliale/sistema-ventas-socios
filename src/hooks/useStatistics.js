@@ -60,10 +60,10 @@ export function useStatistics(period = 'month') {
       if (expErr) throw expErr;
 
       // 4. Fetch Purchases (product_lots) for Partner contributions
+      // This is not filtered by date, as the user wants historical total participation.
       const { data: lots, error: lotsErr } = await supabase
         .from('product_lots')
-        .select('quantity, cost_price, partners(name)')
-        .gte('created_at', isoStart);
+        .select('quantity, cost_price, partners(name)');
 
       if (lotsErr) throw lotsErr;
 

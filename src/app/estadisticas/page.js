@@ -123,7 +123,7 @@ export default function StatisticsPage() {
             </div>
 
             <div>
-              <h2 className={styles.sectionTitle}>Inversión en Compras (Por Socio)</h2>
+              <h2 className={styles.sectionTitle}>Participación de Socios (Histórico Total)</h2>
               <div className={styles.tableContainer} style={{ padding: '1rem' }}>
                 {Object.entries(stats.partnerInvestments).length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '1rem' }}>No hay compras registradas en este período</div>
