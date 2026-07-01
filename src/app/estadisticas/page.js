@@ -89,6 +89,30 @@ export default function StatisticsPage() {
             </div>
           </div>
 
+          <h2 className={styles.sectionTitle}>Proyecciones del Mes (Base a ritmo actual)</h2>
+          <div className={styles.dashboardGrid}>
+            <div className={styles.statCard}>
+              <div className={styles.statTitle}>Promedio Ventas Diario</div>
+              <div className={`${styles.statValue} ${styles.warning}`}>
+                {formatCurrency(stats.averageDailySales)}
+              </div>
+            </div>
+            
+            <div className={styles.statCard}>
+              <div className={styles.statTitle}>Proyección Ventas (24 Días)</div>
+              <div className={`${styles.statValue} ${styles.warning}`}>
+                {formatCurrency(stats.projectedSales)}
+              </div>
+            </div>
+
+            <div className={styles.statCard}>
+              <div className={styles.statTitle}>Proyección Margen (Al 1.8)</div>
+              <div className={`${styles.statValue} ${styles.warning}`}>
+                {formatCurrency(stats.projectedMargin)}
+              </div>
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
             <div>
               <h2 className={styles.sectionTitle}>Producto Estrella (Demanda)</h2>

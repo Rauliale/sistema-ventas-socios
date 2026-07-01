@@ -114,6 +114,18 @@ export function useStatistics(period = 'month') {
         partnerInvestments[partnerName] = (partnerInvestments[partnerName] || 0) + investment;
       });
 
+      // H. Projections (24 working days)
+      let daysPassed = 1;
+      if (period === 'month') {
+        daysPassed = now.getDate();
+      } else if (period === 'week') {
+        daysPassed = now.getDay() || 7; // 1 to 7 (Sunday = 7)
+      }
+      
+      const averageDailySales = totalRevenue / Math.max(1, daysPassed);
+      const projectedSales = averageDailySales * 24;
+      const projectedMargin = projectedSales - (projectedSales / 1.8);
+
       setStats({
         totalRevenue,
         totalNetProfit,
@@ -124,7 +136,10 @@ export function useStatistics(period = 'month') {
         totalExpenses,
         breakEvenPoint,
         topProduct,
-        partnerInvestments
+        partnerInvestments,
+        averageDailySales,
+        projectedSales,
+        projectedMargin
       });
 
     } catch (err) {
