@@ -90,10 +90,7 @@ export function useStatistics(period = 'month') {
         breakEvenPoint = totalExpenses / profitMarginPercentage;
       }
 
-      // E. Margen Operativo (Formula anterior del usuario: Ventas - (Ventas / 1.8))
-      const margenOperativo = totalRevenue - (totalRevenue / 1.8);
-
-      // F. Most Demanded Product
+      // E. Most Demanded Product
       const productCounts = {};
       saleItems.forEach(item => {
         productCounts[item.product_name] = (productCounts[item.product_name] || 0) + item.sold_quantity;
@@ -106,7 +103,7 @@ export function useStatistics(period = 'month') {
         }
       });
 
-      // G. Partner Purchases (Investments)
+      // F. Partner Purchases (Investments)
       const partnerInvestments = {};
       lots.forEach(lot => {
         const partnerName = lot.partners?.name || 'Desconocido';
@@ -114,7 +111,7 @@ export function useStatistics(period = 'month') {
         partnerInvestments[partnerName] = (partnerInvestments[partnerName] || 0) + investment;
       });
 
-      // H. Projections (24 working days)
+      // G. Projections (24 working days)
       let daysPassed = 1;
       if (period === 'month') {
         daysPassed = now.getDate();
@@ -124,12 +121,11 @@ export function useStatistics(period = 'month') {
       
       const averageDailySales = totalRevenue / Math.max(1, daysPassed);
       const projectedSales = averageDailySales * 24;
-      const projectedMargin = projectedSales - (projectedSales / 1.8);
+      const projectedMargin = projectedSales * profitMarginPercentage; // Usando porcentaje real
 
       setStats({
         totalRevenue,
         totalNetProfit,
-        margenOperativo,
         salesCount,
         averageTicket,
         profitMarginPercentage,

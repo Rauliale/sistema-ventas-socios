@@ -61,16 +61,6 @@ export default function StatisticsPage() {
               </div>
             </div>
 
-            <div className={styles.statCard} style={{ borderLeft: '4px solid var(--color-primary)' }}>
-              <div className={styles.statTitle}>Margen Operativo (Al 1.8)</div>
-              <div className={`${styles.statValue} ${styles.success}`}>
-                {formatCurrency(stats.margenOperativo)}
-              </div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
-                Cálculo tradicional histórico
-              </div>
-            </div>
-
             <div className={styles.statCard}>
               <div className={styles.statTitle}>Ticket Promedio</div>
               <div className={styles.statValue}>
@@ -106,9 +96,12 @@ export default function StatisticsPage() {
             </div>
 
             <div className={styles.statCard}>
-              <div className={styles.statTitle}>Proyección Margen (Al 1.8)</div>
-              <div className={`${styles.statValue} ${styles.warning}`}>
+              <div className={styles.statTitle}>Proyección Ganancia Neta</div>
+              <div className={`${styles.statValue} ${styles.success}`}>
                 {formatCurrency(stats.projectedMargin)}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
+                Usando margen real ({formatPercent(stats.profitMarginPercentage)})
               </div>
             </div>
           </div>
