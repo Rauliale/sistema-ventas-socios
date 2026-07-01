@@ -106,21 +106,65 @@ export default function StatisticsPage() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
             <div>
-              <h2 className={styles.sectionTitle}>Producto Estrella (Demanda)</h2>
-              <Card>
-                <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏆</div>
-                  <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--color-primary)' }}>
-                    {stats.topProduct.name}
-                  </h3>
-                  <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.1rem' }}>
-                    <strong>{stats.topProduct.quantity}</strong> unidades vendidas
-                  </p>
-                </div>
-              </Card>
+              <h2 className={styles.sectionTitle}>Top 10: Más Vendidos (Volumen)</h2>
+              <div className={styles.tableContainer}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th style={{ textAlign: 'center' }}>Unidades</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.topProductsByQuantity && stats.topProductsByQuantity.length > 0 ? (
+                      stats.topProductsByQuantity.map((product, idx) => (
+                        <tr key={idx}>
+                          <td>{idx + 1}. <strong>{product.name}</strong></td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span style={{ backgroundColor: 'var(--color-primary)', color: 'white', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.9rem' }}>
+                              {product.quantity}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr><td colSpan="2" style={{ textAlign: 'center' }}>Sin ventas</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
+
+            <div>
+              <h2 className={styles.sectionTitle}>Top 10: Más Rentables (Ganancia)</h2>
+              <div className={styles.tableContainer}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th style={{ textAlign: 'right' }}>Ganancia Neta</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.topProductsByProfit && stats.topProductsByProfit.length > 0 ? (
+                      stats.topProductsByProfit.map((product, idx) => (
+                        <tr key={idx}>
+                          <td>{idx + 1}. <strong>{product.name}</strong></td>
+                          <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 'bold' }}>
+                            {formatCurrency(product.profit)}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr><td colSpan="2" style={{ textAlign: 'center' }}>Sin datos</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
             <div>
               <h2 className={styles.sectionTitle}>Valorización de Stock Actual (Por Socio)</h2>

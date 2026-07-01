@@ -90,18 +90,25 @@ export function useStatistics(period = 'month') {
         breakEvenPoint = totalExpenses / profitMarginPercentage;
       }
 
-      // E. Most Demanded Product
-      const productCounts = {};
+      // E. Product Performance
+      const productPerformance = {};
       saleItems.forEach(item => {
-        productCounts[item.product_name] = (productCounts[item.product_name] || 0) + item.sold_quantity;
+        if (!productPerformance[item.product_name]) {
+          productPerformance[item.product_name] = { quantity: 0, profit: 0 };
+        }
+        productPerformance[item.product_name].quantity += item.sold_quantity;
+        productPerformance[item.product_name].profit += parseFloat(item.net_profit || 0);
       });
       
-      let topProduct = { name: 'Ninguno', quantity: 0 };
-      Object.entries(productCounts).forEach(([name, qty]) => {
-        if (qty > topProduct.quantity) {
-          topProduct = { name, quantity: qty };
-        }
-      });
+      const topProductsByQuantity = Object.entries(productPerformance)
+        .map(([name, data]) => ({ name, quantity: data.quantity }))
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 10);
+
+      const topProductsByProfit = Object.entries(productPerformance)
+        .map(([name, data]) => ({ name, profit: data.profit }))
+        .sort((a, b) => b.profit - a.profit)
+        .slice(0, 10);
 
       // F. Partner Purchases (Investments)
       const partnerInvestments = {};
@@ -131,7 +138,8 @@ export function useStatistics(period = 'month') {
         profitMarginPercentage,
         totalExpenses,
         breakEvenPoint,
-        topProduct,
+        topProductsByQuantity,
+        topProductsByProfit,
         partnerInvestments,
         averageDailySales,
         projectedSales,
