@@ -208,7 +208,6 @@ export default function StatisticsPage() {
                 )}
               </div>
             </div>
-          </div>
         </>
       )}
     </div>
