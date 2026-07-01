@@ -233,7 +233,7 @@ export default function Compras() {
             <div style={{ marginTop: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <strong>Productos a ingresar</strong>
-                <div style={{ display: 'flex', gap: '0.5rem', flex: '1', maxWidth: '400px' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flex: '1', maxWidth: '600px' }}>
                   <Input 
                     placeholder="Escanear o ingresar código de barras..." 
                     value={barcodeInput}
@@ -242,6 +242,13 @@ export default function Compras() {
                     style={{ flex: 1, marginBottom: 0 }}
                   />
                   <Button type="button" onClick={handleBarcodeSubmit}>Buscar</Button>
+                  <Button 
+                    type="button" 
+                    variant="secondary" 
+                    onClick={() => { setNewProductBarcode(''); setShowNewProductModal(true); }}
+                  >
+                    + Nuevo Producto
+                  </Button>
                 </div>
                 <Button type="button" variant="secondary" onClick={addItem}>+ Agregar Fila</Button>
               </div>
