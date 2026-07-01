@@ -90,7 +90,10 @@ export function useStatistics(period = 'month') {
         breakEvenPoint = totalExpenses / profitMarginPercentage;
       }
 
-      // E. Most Demanded Product
+      // E. Margen Operativo (Formula anterior del usuario: Ventas - (Ventas / 1.8))
+      const margenOperativo = totalRevenue - (totalRevenue / 1.8);
+
+      // F. Most Demanded Product
       const productCounts = {};
       saleItems.forEach(item => {
         productCounts[item.product_name] = (productCounts[item.product_name] || 0) + item.sold_quantity;
@@ -103,7 +106,7 @@ export function useStatistics(period = 'month') {
         }
       });
 
-      // F. Partner Purchases (Investments)
+      // G. Partner Purchases (Investments)
       const partnerInvestments = {};
       lots.forEach(lot => {
         const partnerName = lot.partners?.name || 'Desconocido';
@@ -114,6 +117,7 @@ export function useStatistics(period = 'month') {
       setStats({
         totalRevenue,
         totalNetProfit,
+        margenOperativo,
         salesCount,
         averageTicket,
         profitMarginPercentage,

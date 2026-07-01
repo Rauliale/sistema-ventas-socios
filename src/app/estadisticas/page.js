@@ -52,12 +52,22 @@ export default function StatisticsPage() {
             </div>
 
             <div className={styles.statCard}>
-              <div className={styles.statTitle}>Ganancia Neta Estimada</div>
+              <div className={styles.statTitle}>Ganancia Neta (Exacta)</div>
               <div className={`${styles.statValue} ${styles.success}`}>
                 {formatCurrency(stats.totalNetProfit)}
               </div>
               <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
-                Margen Promedio: {formatPercent(stats.profitMarginPercentage)}
+                Margen Real: {formatPercent(stats.profitMarginPercentage)}
+              </div>
+            </div>
+
+            <div className={styles.statCard} style={{ borderLeft: '4px solid var(--color-primary)' }}>
+              <div className={styles.statTitle}>Margen Operativo (Al 1.8)</div>
+              <div className={`${styles.statValue} ${styles.success}`}>
+                {formatCurrency(stats.margenOperativo)}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
+                Cálculo tradicional histórico
               </div>
             </div>
 
