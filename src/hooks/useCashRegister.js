@@ -70,8 +70,19 @@ export function useCashRegister() {
 
       if (salesErr) throw salesErr;
 
+      // Fetch expenses paid from register
+      const { data: expenses, error: expErr } = await supabase
+        .from('expenses')
+        .select('amount')
+        .eq('paid_from_register', true)
+        .gte('created_at', reg.opened_at)
+        .lte('created_at', new Date().toISOString());
+        
+      if (expErr) throw expErr;
+
       let totalCashSales = 0;
       let totalTransferSales = 0;
+      let totalCashExpenses = 0;
 
       sales.forEach(sale => {
         const amt = parseFloat(sale.total_amount) || 0;
@@ -81,9 +92,13 @@ export function useCashRegister() {
           totalTransferSales += amt;
         }
       });
+      
+      expenses.forEach(exp => {
+        totalCashExpenses += (parseFloat(exp.amount) || 0);
+      });
 
       const initialCash = parseFloat(reg.initial_cash) || 0;
-      const expectedCash = initialCash + totalCashSales;
+      const expectedCash = (initialCash + totalCashSales) - totalCashExpenses;
       const parsedActualCash = parseFloat(actualCash) || 0;
       const difference = parsedActualCash - expectedCash;
 
@@ -125,8 +140,18 @@ export function useCashRegister() {
 
     if (salesErr) throw salesErr;
 
+    const { data: expenses, error: expErr } = await supabase
+        .from('expenses')
+        .select('amount')
+        .eq('paid_from_register', true)
+        .gte('created_at', activeRegister.opened_at)
+        .lte('created_at', new Date().toISOString());
+
+    if (expErr) throw expErr;
+
     let totalCashSales = 0;
     let totalTransferSales = 0;
+    let totalCashExpenses = 0;
 
     sales.forEach(sale => {
       const amt = parseFloat(sale.total_amount) || 0;
@@ -136,14 +161,19 @@ export function useCashRegister() {
         totalTransferSales += amt;
       }
     });
+    
+    expenses.forEach(exp => {
+      totalCashExpenses += (parseFloat(exp.amount) || 0);
+    });
 
     const initialCash = parseFloat(activeRegister.initial_cash) || 0;
-    const expectedCash = initialCash + totalCashSales;
+    const expectedCash = (initialCash + totalCashSales) - totalCashExpenses;
 
     return {
       initialCash,
       totalCashSales,
       totalTransferSales,
+      totalCashExpenses,
       expectedCash
     };
   };

@@ -43,35 +43,40 @@ export function useExpenses() {
 
   const addExpense = async (payload) => {
     try {
-      // payload: { category_id, description, amount, shared_type }
+      // payload: { category_id, description, amount, shared_type, paid_from_register }
       const data = await db.insert('expenses', payload);
-      
-      // Calculate financial distribution
-      // Since we don't have an RPC for expenses yet, we'll do the logic here or in RPC.
-      // For real-world we'd do an RPC. Let's do a simple RPC call if we had one, 
-      // but we don't have rpc_process_expense. We will just insert to financial_movements directly for simplicity.
-      // Wait, `shared_type` might be "50/50".
       
       const partners = await db.get('partners');
       const raul = partners.find(p => p.name === 'Raúl');
       const nahuel = partners.find(p => p.name === 'Nahuel');
+      const negro = partners.find(p => p.name === 'Negro Añais');
       
-      let rShare = payload.amount / 2;
-      let nShare = payload.amount / 2;
+      let financialMovements = [];
+      const amt = payload.amount;
       
-      if (payload.shared_type !== '50/50') {
-        // Assume percentage string like '60/40' (Raul/Nahuel)
-        const parts = payload.shared_type.split('/');
-        if (parts.length === 2) {
-          rShare = payload.amount * (parseFloat(parts[0]) / 100);
-          nShare = payload.amount * (parseFloat(parts[1]) / 100);
-        }
+      if (payload.shared_type === '50/50') {
+         financialMovements.push({ partner_id: raul.id, type: 'expense', amount: -(amt/2), related_id: data[0].id });
+         financialMovements.push({ partner_id: nahuel.id, type: 'expense', amount: -(amt/2), related_id: data[0].id });
+      } else if (payload.shared_type === '100_raul') {
+         if (raul) financialMovements.push({ partner_id: raul.id, type: 'expense', amount: -amt, related_id: data[0].id });
+      } else if (payload.shared_type === '100_nahuel') {
+         if (nahuel) financialMovements.push({ partner_id: nahuel.id, type: 'expense', amount: -amt, related_id: data[0].id });
+      } else if (payload.shared_type === '100_negro') {
+         if (negro) financialMovements.push({ partner_id: negro.id, type: 'expense', amount: -amt, related_id: data[0].id });
+      } else if (payload.shared_type === '33_all') {
+         const split = amt / 3;
+         if (raul) financialMovements.push({ partner_id: raul.id, type: 'expense', amount: -split, related_id: data[0].id });
+         if (nahuel) financialMovements.push({ partner_id: nahuel.id, type: 'expense', amount: -split, related_id: data[0].id });
+         if (negro) financialMovements.push({ partner_id: negro.id, type: 'expense', amount: -split, related_id: data[0].id });
+      } else {
+         // Fallback old behavior
+         if (raul) financialMovements.push({ partner_id: raul.id, type: 'expense', amount: -(amt/2), related_id: data[0].id });
+         if (nahuel) financialMovements.push({ partner_id: nahuel.id, type: 'expense', amount: -(amt/2), related_id: data[0].id });
       }
 
-      await db.insert('financial_movements', [
-        { partner_id: raul.id, type: 'expense', amount: -rShare, related_id: data[0].id },
-        { partner_id: nahuel.id, type: 'expense', amount: -nShare, related_id: data[0].id }
-      ]);
+      if (financialMovements.length > 0) {
+        await db.insert('financial_movements', financialMovements);
+      }
 
       await fetchExpenses();
       return data;

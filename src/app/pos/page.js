@@ -8,6 +8,7 @@ import { useProducts } from '../../hooks/useProducts';
 import { useSales } from '../../hooks/useSales';
 import { useAuth } from '../../context/AuthContext';
 import { useCashRegister } from '../../hooks/useCashRegister';
+import { useExpenses } from '../../hooks/useExpenses';
 import styles from './page.module.css';
 
 export default function PointOfSale() {
@@ -16,6 +17,7 @@ export default function PointOfSale() {
   const { user } = useAuth();
   
   const { activeRegister, loading: registerLoading, openRegister, closeRegister, getClosurePreview } = useCashRegister();
+  const { categories, addExpense } = useExpenses();
 
   const [barcode, setBarcode] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -27,6 +29,10 @@ export default function PointOfSale() {
   const [initialCash, setInitialCash] = useState('');
   const [actualCash, setActualCash] = useState('');
   const [closurePreview, setClosurePreview] = useState(null);
+
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({ description: '', category_id: '', amount: '', shared_type: '50/50' });
+  const [expenseSubmitting, setExpenseSubmitting] = useState(false);
 
   const handleBarcodeChange = (e) => {
     const val = e.target.value;
@@ -156,14 +162,98 @@ export default function PointOfSale() {
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1>Punto de Venta</h1>
-        <Button variant="danger" onClick={async () => {
-          const preview = await getClosurePreview();
-          setClosurePreview(preview);
-          setShowCloseModal(true);
-        }}>
-          Cerrar Caja
-        </Button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <Button variant="secondary" onClick={() => setShowExpenseModal(true)}>
+            Registrar Gasto
+          </Button>
+          <Button variant="danger" onClick={async () => {
+            const preview = await getClosurePreview();
+            setClosurePreview(preview);
+            setShowCloseModal(true);
+          }}>
+            Cerrar Caja
+          </Button>
+        </div>
       </div>
+
+      {showExpenseModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+          display: 'flex', justifyContent: 'center', alignItems: 'center'
+        }}>
+          <Card title="Gasto de Caja Diaria" style={{ minWidth: '400px' }}>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                setExpenseSubmitting(true);
+                await addExpense({
+                  description: expenseForm.description,
+                  category_id: expenseForm.category_id,
+                  amount: parseFloat(expenseForm.amount),
+                  shared_type: expenseForm.shared_type,
+                  paid_from_register: true
+                });
+                setShowExpenseModal(false);
+                setExpenseForm({ description: '', category_id: expenseForm.category_id, amount: '', shared_type: '50/50' });
+                setMessage({ type: 'success', text: 'Gasto registrado y descontado de la caja' });
+              } catch (err) {
+                setMessage({ type: 'error', text: 'Error al registrar gasto: ' + err.message });
+              } finally {
+                setExpenseSubmitting(false);
+              }
+            }}>
+              <Input 
+                label="Descripción del Gasto" 
+                value={expenseForm.description}
+                onChange={e => setExpenseForm({...expenseForm, description: e.target.value})}
+                required
+                autoFocus
+              />
+              <div style={{ marginTop: '1rem' }}>
+                <label style={{ fontWeight: 'bold', fontSize: '0.875rem' }}>Categoría</label>
+                <select 
+                  className={styles.paymentSelect}
+                  value={expenseForm.category_id}
+                  onChange={e => setExpenseForm({...expenseForm, category_id: e.target.value})}
+                  required
+                >
+                  <option value="">Seleccione categoría...</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <Input 
+                label="Monto Retirado de Caja ($)" 
+                type="number" 
+                step="0.01" 
+                value={expenseForm.amount}
+                onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})}
+                required
+              />
+              <div style={{ marginTop: '1rem' }}>
+                <label style={{ fontWeight: 'bold', fontSize: '0.875rem' }}>Distribución (Quién lo paga)</label>
+                <select 
+                  className={styles.paymentSelect}
+                  value={expenseForm.shared_type}
+                  onChange={e => setExpenseForm({...expenseForm, shared_type: e.target.value})}
+                >
+                  <option value="50/50">50/50 (Raúl y Nahuel)</option>
+                  <option value="100_raul">100% Raúl</option>
+                  <option value="100_nahuel">100% Nahuel</option>
+                  <option value="100_negro">100% Negro Añais</option>
+                  <option value="33_all">Partes Iguales (Raúl, Nahuel, Negro)</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                <Button type="submit" variant="primary" style={{ flex: 1 }} disabled={expenseSubmitting}>Registrar</Button>
+                <Button type="button" variant="secondary" onClick={() => setShowExpenseModal(false)}>Cancelar</Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
 
       {showCloseModal && closurePreview && (
         <div style={{
