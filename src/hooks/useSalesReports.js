@@ -37,7 +37,13 @@ export function useSalesReports() {
           startDate.setHours(0, 0, 0, 0);
         }
         
-        query = query.gte('sale_date', startDate.toISOString());
+        let startIso = startDate.toISOString();
+        if (startIso < '2026-07-01T00:00:00.000Z') {
+          startIso = '2026-07-01T00:00:00.000Z';
+        }
+        query = query.gte('sale_date', startIso);
+      } else {
+        query = query.gte('sale_date', '2026-07-01T00:00:00.000Z');
       }
 
       // Partner filtering

@@ -33,7 +33,10 @@ export function useStatistics(period = 'month') {
         startDate.setHours(0, 0, 0, 0);
       }
 
-      const isoStart = startDate.toISOString();
+      let isoStart = startDate.toISOString();
+      if (isoStart < '2026-07-01T00:00:00.000Z') {
+        isoStart = '2026-07-01T00:00:00.000Z';
+      }
 
       // 1. Fetch Sales Items from view
       const { data: saleItems, error: salesErr } = await supabase

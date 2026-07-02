@@ -35,12 +35,13 @@ export default function Dashboard() {
       // Obtener socios
       const partners = await db.get('partners');
 
-      // Calcular totales por socio agrupando movimientos
+      // Calcular totales por socio agrupando movimientos (ignorando junio)
       const statsPromises = partners.map(async (partner) => {
         const { data } = await supabase
           .from('financial_movements')
           .select('type, amount')
-          .eq('partner_id', partner.id);
+          .eq('partner_id', partner.id)
+          .gte('date', '2026-07-01T00:00:00.000Z');
 
         const totals = (data || []).reduce((acc, mov) => {
           acc[mov.type] = (acc[mov.type] || 0) + parseFloat(mov.amount);
@@ -64,10 +65,11 @@ export default function Dashboard() {
       const stats = await Promise.all(statsPromises);
       setPartnerStats(stats);
 
-      // Últimos 15 movimientos
+      // Últimos 15 movimientos (ignorando junio)
       const { data: recentMovs } = await supabase
         .from('financial_movements')
         .select('*, partners(name)')
+        .gte('date', '2026-07-01T00:00:00.000Z')
         .order('date', { ascending: false })
         .limit(15);
 

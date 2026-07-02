@@ -56,23 +56,26 @@ export default function Finanzas() {
 
       const { supabase } = await import('../../lib/supabase');
 
-      // 2. Obtener ventas
+      // 2. Obtener ventas (ignorando junio)
       const { data: sales, error: salesErr } = await supabase
         .from('sales')
-        .select('payment_method, total_amount');
+        .select('payment_method, total_amount, date')
+        .gte('date', '2026-07-01T00:00:00.000Z');
       if (salesErr) throw salesErr;
 
-      // 3. Obtener gastos (solo pagados)
+      // 3. Obtener gastos (solo pagados, ignorando junio)
       const { data: expenses, error: expErr } = await supabase
         .from('expenses')
-        .select('amount, paid_from_register, status')
-        .eq('status', 'paid');
+        .select('amount, paid_from_register, status, date')
+        .eq('status', 'paid')
+        .gte('date', '2026-07-01T00:00:00.000Z');
       if (expErr) throw expErr;
 
-      // 4. Obtener todos los movimientos financieros
+      // 4. Obtener todos los movimientos financieros (ignorando junio)
       const { data: finMovements, error: finErr } = await supabase
         .from('financial_movements')
         .select('*')
+        .gte('date', '2026-07-01T00:00:00.000Z')
         .order('date', { ascending: false });
       if (finErr) throw finErr;
 
