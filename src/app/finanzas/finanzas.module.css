@@ -1,0 +1,316 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.fundCard {
+  background: var(--card-bg, #ffffff);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fundCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+}
+
+.cashCard {
+  border-top: 5px solid #10b981;
+}
+
+.transferCard {
+  border-top: 5px solid #3b82f6;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.cardTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+}
+
+.cardIcon {
+  font-size: 1.25rem;
+  opacity: 0.8;
+}
+
+.cardValue {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 1rem;
+  font-family: inherit;
+}
+
+.cardBreakdown {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 0.75rem;
+  color: #4b5563;
+}
+
+.breakdownItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.breakdownLabel {
+  color: #9ca3af;
+  margin-bottom: 0.125rem;
+}
+
+.breakdownValue {
+  font-weight: 600;
+}
+
+.breakdownValue.positive {
+  color: #10b981;
+}
+
+.breakdownValue.negative {
+  color: #ef4444;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+/* Modal Styles */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modalContent {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  padding: 2rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  position: relative;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 1rem;
+}
+
+.modalTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.closeButton:hover {
+  background-color: #f3f4f6;
+  color: #4b5563;
+}
+
+.formGroup {
+  margin-bottom: 1.25rem;
+}
+
+.formLabel {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: 0.375rem;
+}
+
+.selectInput {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  color: #1f2937;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.selectInput:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  outline: none;
+}
+
+.textareaInput {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  min-height: 80px;
+  resize: vertical;
+  background-color: #ffffff;
+  color: #1f2937;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.textareaInput:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  outline: none;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 1.25rem;
+}
+
+/* Badges for operation type */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  text-transform: capitalize;
+}
+
+.badgeProfit {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.badgeExpense {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.badgeInvestment {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.badgeWithdrawal {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+/* Alert styles for insufficient funds */
+.warningAlert {
+  background-color: #fffbeb;
+  border-left: 4px solid #f59e0b;
+  color: #b45309;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  margin-bottom: 1.25rem;
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dark mode overrides (if applicable) */
+@media (prefers-color-scheme: dark) {
+  .fundCard {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .cardTitle {
+    color: #94a3b8;
+  }
+  .cardValue {
+    color: #f8fafc;
+  }
+  .cardBreakdown {
+    border-top-color: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+  }
+  .modalContent {
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .modalTitle {
+    color: #f8fafc;
+  }
+  .closeButton:hover {
+    background-color: #334155;
+    color: #cbd5e1;
+  }
+  .selectInput, .textareaInput {
+    background-color: #0f172a;
+    border-color: #334155;
+    color: #f8fafc;
+  }
+  .selectInput:focus, .textareaInput:focus {
+    border-color: #3b82f6;
+  }
+  .formLabel {
+    color: #cbd5e1;
+  }
+  .modalFooter {
+    border-top-color: #334155;
+  }
+}

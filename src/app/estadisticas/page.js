@@ -190,7 +190,7 @@ export default function StatisticsPage() {
                                 <span style={{ color: 'var(--color-text-secondary)' }}>{formatCurrency(amount)}</span>
                               </div>
                             </div>
-                            <div style={{ width: '100%', backgroundColor: 'var(--color-background)', height: '12px', borderRadius: '6px', overflow: 'hidden' }}>
+                            <div style={{ width: '100%', backgroundColor: 'var(--color-border)', height: '12px', borderRadius: '6px', overflow: 'hidden' }}>
                               <div 
                                 style={{ 
                                   width: `${percentage}%`, 

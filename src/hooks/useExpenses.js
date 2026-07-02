@@ -75,7 +75,12 @@ export function useExpenses() {
       }
 
       if (financialMovements.length > 0) {
-        await db.insert('financial_movements', financialMovements);
+        const payMethod = payload.paid_from_register ? 'Efectivo' : 'Transferencia';
+        const movementsWithPaymentMethod = financialMovements.map(m => ({
+          ...m,
+          payment_method: payMethod
+        }));
+        await db.insert('financial_movements', movementsWithPaymentMethod);
       }
 
       await fetchExpenses();
