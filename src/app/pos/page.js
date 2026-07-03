@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -9,6 +9,7 @@ import { useSales } from '../../hooks/useSales';
 import { useAuth } from '../../context/AuthContext';
 import { useCashRegister } from '../../hooks/useCashRegister';
 import { useExpenses } from '../../hooks/useExpenses';
+import { supabase } from '../../lib/supabase';
 import styles from './page.module.css';
 
 export default function PointOfSale() {
@@ -33,6 +34,26 @@ export default function PointOfSale() {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [expenseForm, setExpenseForm] = useState({ description: '', category_id: '', amount: '', shared_type: '50/50' });
   const [expenseSubmitting, setExpenseSubmitting] = useState(false);
+  const [todaySales, setTodaySales] = useState([]);
+
+  const fetchTodaySales = async () => {
+    if (!activeRegister) return;
+    try {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('id, sale_number, total_amount, payment_method, date')
+        .gte('date', activeRegister.opened_at)
+        .order('date', { ascending: false });
+      if (error) throw error;
+      setTodaySales(data || []);
+    } catch (err) {
+      console.error("Error al cargar ventas del día:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchTodaySales();
+  }, [activeRegister]);
 
   const handleBarcodeChange = (e) => {
     const val = e.target.value;
@@ -122,6 +143,7 @@ export default function PointOfSale() {
       
       setMessage({ type: 'success', text: 'Venta registrada con éxito' });
       setCart([]);
+      fetchTodaySales();
     } catch (err) {
       setMessage({ type: 'error', text: 'Error al registrar venta: ' + err.message });
     }
@@ -408,6 +430,47 @@ export default function PointOfSale() {
           </Card>
         </div>
       </div>
+
+      {activeRegister && (
+        <Card title="Ventas del Día (Turno Actual)" style={{ marginTop: '2rem' }}>
+          {todaySales.length === 0 ? (
+            <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center', padding: '1.5rem 0' }}>
+              No se han registrado ventas en este turno.
+            </p>
+          ) : (
+            <div className={styles.salesTableContainer}>
+              <table className={styles.salesTable}>
+                <thead>
+                  <tr>
+                    <th style={{ paddingLeft: '0' }}>Nº Venta</th>
+                    <th>Hora</th>
+                    <th>Forma de Pago</th>
+                    <th style={{ textAlign: 'right', paddingRight: '0' }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {todaySales.map(sale => (
+                    <tr key={sale.id}>
+                      <td style={{ paddingLeft: '0', fontWeight: '500' }}>#{sale.sale_number}</td>
+                      <td>{new Date(sale.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</td>
+                      <td>
+                        <span className={`${styles.paymentBadge} ${
+                          sale.payment_method === 'Efectivo' ? styles.badgeCash : styles.badgeDigital
+                        }`}>
+                          {sale.payment_method}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right', paddingRight: '0', fontWeight: 'bold' }}>
+                        ${parseFloat(sale.total_amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   );
 }

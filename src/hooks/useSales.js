@@ -73,9 +73,9 @@ export function useSales() {
 
           let financialMovements = [];
           const split = taxAmount / 3;
-          if (raul) financialMovements.push({ partner_id: raul.id, type: 'expense', amount: -split, related_id: expData[0].id });
-          if (nahuel) financialMovements.push({ partner_id: nahuel.id, type: 'expense', amount: -split, related_id: expData[0].id });
-          if (negro) financialMovements.push({ partner_id: negro.id, type: 'expense', amount: -split, related_id: expData[0].id });
+          if (raul) financialMovements.push({ partner_id: raul.id, type: 'expense', amount: -split, related_id: expData[0].id, payment_method: 'Transferencia' });
+          if (nahuel) financialMovements.push({ partner_id: nahuel.id, type: 'expense', amount: -split, related_id: expData[0].id, payment_method: 'Transferencia' });
+          if (negro) financialMovements.push({ partner_id: negro.id, type: 'expense', amount: -split, related_id: expData[0].id, payment_method: 'Transferencia' });
           
           if (financialMovements.length > 0) {
             await db.insert('financial_movements', financialMovements);
