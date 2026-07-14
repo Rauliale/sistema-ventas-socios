@@ -216,10 +216,30 @@ export function useSales() {
     }
   };
 
+  const cancelSale = async (saleId, reason) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const { supabase } = await import('../lib/supabase');
+      const { error: err } = await supabase.rpc('rpc_cancel_sale', {
+        p_sale_id: saleId,
+        p_reason: reason
+      });
+      if (err) throw err;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     processSale,
     updateSalePaymentMethod,
+    cancelSale,
     loading,
     error
   };
 }
+

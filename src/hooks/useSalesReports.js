@@ -8,12 +8,13 @@ export function useSalesReports() {
   const [error, setError] = useState(null);
 
   // Available filters
-  const [dateFilter, setDateFilter] = useState('month'); // 'today', 'week', 'month', 'all'
+  const [dateFilter, setDateFilter] = useState('month'); // 'today', 'week', 'month', 'custom', 'all'
+  const [customDate, setCustomDate] = useState(new Date().toISOString().split('T')[0]);
   const [partnerFilter, setPartnerFilter] = useState('all'); // 'all', or partner name
 
   useEffect(() => {
     fetchSalesDetails();
-  }, [dateFilter, partnerFilter]);
+  }, [dateFilter, customDate, partnerFilter]);
 
   const fetchSalesDetails = async () => {
     try {
@@ -22,10 +23,22 @@ export function useSalesReports() {
       let query = supabase.from('vw_sales_details').select('*');
       let salesQuery = supabase
         .from('sales')
-        .select('id, sale_number, date, payment_method, total_amount, profiles(name)');
+        .select('id, sale_number, date, payment_method, total_amount, status, cancellation_reason, cancelled_at, profiles(name)');
 
       // Date filtering
-      if (dateFilter !== 'all') {
+      if (dateFilter === 'custom') {
+        const startDate = new Date(customDate + 'T00:00:00');
+        const endDate = new Date(customDate + 'T23:59:59.999');
+        let startIso = startDate.toISOString();
+        let endIso = endDate.toISOString();
+
+        if (startIso < '2026-07-01T00:00:00.000Z') {
+          startIso = '2026-07-01T00:00:00.000Z';
+        }
+
+        query = query.gte('sale_date', startIso).lte('sale_date', endIso);
+        salesQuery = salesQuery.gte('date', startIso).lte('date', endIso);
+      } else if (dateFilter !== 'all') {
         const now = new Date();
         let startDate = new Date();
 
@@ -86,6 +99,8 @@ export function useSalesReports() {
     error,
     dateFilter,
     setDateFilter,
+    customDate,
+    setCustomDate,
     partnerFilter,
     setPartnerFilter,
     refresh: fetchSalesDetails
