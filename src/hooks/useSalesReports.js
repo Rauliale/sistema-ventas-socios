@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 
 export function useSalesReports() {
   const [salesDetails, setSalesDetails] = useState([]);
+  const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -19,6 +20,9 @@ export function useSalesReports() {
       setLoading(true);
       
       let query = supabase.from('vw_sales_details').select('*');
+      let salesQuery = supabase
+        .from('sales')
+        .select('id, sale_number, date, payment_method, total_amount, profiles(name)');
 
       // Date filtering
       if (dateFilter !== 'all') {
@@ -42,8 +46,10 @@ export function useSalesReports() {
           startIso = '2026-07-01T00:00:00.000Z';
         }
         query = query.gte('sale_date', startIso);
+        salesQuery = salesQuery.gte('date', startIso);
       } else {
         query = query.gte('sale_date', '2026-07-01T00:00:00.000Z');
+        salesQuery = salesQuery.gte('date', '2026-07-01T00:00:00.000Z');
       }
 
       // Partner filtering
@@ -53,12 +59,18 @@ export function useSalesReports() {
 
       // Order by latest first
       query = query.order('sale_date', { ascending: false });
+      salesQuery = salesQuery.order('date', { ascending: false });
 
-      const { data, error: fetchErr } = await query;
+      const [detailsRes, salesRes] = await Promise.all([query, salesQuery]);
       
-      if (fetchErr) throw new Error(fetchErr.message);
+      if (detailsRes.error) throw new Error(detailsRes.error.message);
+      if (salesRes.error) throw new Error(salesRes.error.message);
       
-      setSalesDetails(data || []);
+      setSalesDetails(detailsRes.data || []);
+      setSales((salesRes.data || []).map(s => ({
+        ...s,
+        seller_name: s.profiles?.name || 'Desconocido'
+      })));
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -69,6 +81,7 @@ export function useSalesReports() {
 
   return {
     salesDetails,
+    sales,
     loading,
     error,
     dateFilter,

@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCashRegister } from '../../hooks/useCashRegister';
 import { useExpenses } from '../../hooks/useExpenses';
 import { supabase } from '../../lib/supabase';
+import { Edit2 } from 'lucide-react';
 import styles from './page.module.css';
 
 export default function PointOfSale() {
@@ -35,6 +36,11 @@ export default function PointOfSale() {
   const [expenseForm, setExpenseForm] = useState({ description: '', category_id: '', amount: '', shared_type: '50/50' });
   const [expenseSubmitting, setExpenseSubmitting] = useState(false);
   const [todaySales, setTodaySales] = useState([]);
+
+  // States for editing sale payment method
+  const [editingSale, setEditingSale] = useState(null);
+  const [newPaymentMethod, setNewPaymentMethod] = useState('');
+  const [updatingPayment, setUpdatingPayment] = useState(false);
 
   const fetchTodaySales = async () => {
     if (!activeRegister) return;
@@ -146,6 +152,22 @@ export default function PointOfSale() {
       fetchTodaySales();
     } catch (err) {
       setMessage({ type: 'error', text: 'Error al registrar venta: ' + err.message });
+    }
+  };
+
+  const handleUpdatePaymentMethod = async (e) => {
+    e.preventDefault();
+    if (!editingSale || !newPaymentMethod) return;
+    try {
+      setUpdatingPayment(true);
+      await updateSalePaymentMethod(editingSale.id, newPaymentMethod);
+      setMessage({ type: 'success', text: 'Método de pago actualizado con éxito' });
+      setEditingSale(null);
+      fetchTodaySales();
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Error al actualizar método de pago: ' + err.message });
+    } finally {
+      setUpdatingPayment(false);
     }
   };
 
@@ -454,11 +476,34 @@ export default function PointOfSale() {
                       <td style={{ paddingLeft: '0', fontWeight: '500' }}>#{sale.sale_number}</td>
                       <td>{new Date(sale.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</td>
                       <td>
-                        <span className={`${styles.paymentBadge} ${
-                          sale.payment_method === 'Efectivo' ? styles.badgeCash : styles.badgeDigital
-                        }`}>
-                          {sale.payment_method}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span className={`${styles.paymentBadge} ${
+                            sale.payment_method === 'Efectivo' ? styles.badgeCash : styles.badgeDigital
+                          }`}>
+                            {sale.payment_method}
+                          </span>
+                          <button 
+                            onClick={() => {
+                              setEditingSale(sale);
+                              setNewPaymentMethod(sale.payment_method);
+                            }}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: 'var(--color-text-secondary)',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '2px',
+                              borderRadius: '4px',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.color = 'var(--color-primary)'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}
+                            title="Editar Método de Pago"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        </div>
                       </td>
                       <td style={{ textAlign: 'right', paddingRight: '0', fontWeight: 'bold' }}>
                         ${parseFloat(sale.total_amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -470,6 +515,82 @@ export default function PointOfSale() {
             </div>
           )}
         </Card>
+      )}
+      {editingSale && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+          display: 'flex', justifyContent: 'center', alignItems: 'center'
+        }}>
+          <Card title={`Editar Método de Pago - Venta #${editingSale.sale_number}`} style={{ minWidth: '400px' }}>
+            <form onSubmit={handleUpdatePaymentMethod}>
+              <div style={{ marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span>Fecha:</span>
+                  <strong>{new Date(editingSale.date).toLocaleString('es-AR')}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span>Total:</span>
+                  <strong>${parseFloat(editingSale.total_amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span>Método Actual:</span>
+                  <span className={`${styles.paymentBadge} ${
+                    editingSale.payment_method === 'Efectivo' ? styles.badgeCash : styles.badgeDigital
+                  }`}>
+                    {editingSale.payment_method}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '1rem' }}>
+                <label style={{ fontWeight: 'bold', fontSize: '0.875rem' }}>Nuevo Método de Pago</label>
+                <select 
+                  className={styles.paymentSelect}
+                  value={newPaymentMethod}
+                  onChange={e => setNewPaymentMethod(e.target.value)}
+                  required
+                >
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Transferencia">Transferencia</option>
+                  <option value="Mercado Pago">Mercado Pago</option>
+                  <option value="Débito">Débito</option>
+                  <option value="Crédito">Crédito</option>
+                </select>
+              </div>
+
+              {/* Advertencia fiscal contextual */}
+              {editingSale.payment_method === 'Efectivo' && newPaymentMethod !== 'Efectivo' && newPaymentMethod !== '' && (
+                <div style={{
+                  marginTop: '1rem', padding: '0.75rem', borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'rgba(245, 158, 11, 0.1)', borderLeft: '3px solid #f59e0b',
+                  fontSize: '0.875rem', color: '#b45309'
+                }}>
+                  ⚠️ Al cambiar a un medio digital, se calculará y descontará automáticamente una retención del 4% (${(parseFloat(editingSale.total_amount) * 0.04).toFixed(2)}) de impuestos provinciales.
+                </div>
+              )}
+
+              {editingSale.payment_method !== 'Efectivo' && newPaymentMethod === 'Efectivo' && (
+                <div style={{
+                  marginTop: '1rem', padding: '0.75rem', borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)', borderLeft: '3px solid #3b82f6',
+                  fontSize: '0.875rem', color: '#1d4ed8'
+                }}>
+                  ℹ️ Al cambiar a Efectivo, se anulará y eliminará el gasto de retención del 4% asignado a esta venta.
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                <Button type="submit" variant="primary" style={{ flex: 1 }} disabled={updatingPayment}>
+                  {updatingPayment ? 'Guardando...' : 'Guardar Cambios'}
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => setEditingSale(null)} disabled={updatingPayment}>
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
       )}
     </div>
   );

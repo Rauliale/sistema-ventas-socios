@@ -92,8 +92,133 @@ export function useSales() {
     }
   };
 
+  const updateSalePaymentMethod = async (saleId, newPaymentMethod) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const { supabase } = await import('../lib/supabase');
+
+      // 1. Fetch current sale data
+      const { data: sale, error: saleErr } = await supabase
+        .from('sales')
+        .select('payment_method, total_amount, sale_number')
+        .eq('id', saleId)
+        .single();
+
+      if (saleErr) throw saleErr;
+
+      const oldPaymentMethod = sale.payment_method;
+      if (oldPaymentMethod === newPaymentMethod) return;
+
+      // 2. Update payment method on sales table
+      const { error: updateErr } = await supabase
+        .from('sales')
+        .update({ payment_method: newPaymentMethod })
+        .eq('id', saleId);
+
+      if (updateErr) throw updateErr;
+
+      const desc = `Retención Impuesto (4%) - Venta #${sale.sale_number}`;
+
+      // 3. Handle side-effects: Tax deduction (4% Provincial Tax)
+      const oldIsCash = oldPaymentMethod === 'Efectivo';
+      const newIsCash = newPaymentMethod === 'Efectivo';
+
+      if (oldIsCash && !newIsCash) {
+        // Transition from Cash to Digital -> Create tax expense and splits
+        const totalAmount = parseFloat(sale.total_amount);
+        const taxAmount = totalAmount * 0.04;
+
+        if (taxAmount > 0) {
+          // Get or create category
+          let { data: catData } = await supabase
+            .from('expense_categories')
+            .select('id')
+            .eq('name', 'Impuestos Provinciales')
+            .single();
+            
+          let catId;
+          if (!catData) {
+            const { data: newCat } = await supabase
+              .from('expense_categories')
+              .insert({ name: 'Impuestos Provinciales', description: 'Retenciones automáticas de pagos' })
+              .select()
+              .single();
+            catId = newCat.id;
+          } else {
+            catId = catData.id;
+          }
+
+          // Insert Expense
+          const { data: newExp, error: expErr } = await supabase
+            .from('expenses')
+            .insert({
+              category_id: catId,
+              description: desc,
+              amount: taxAmount,
+              shared_type: '33_all',
+              paid_from_register: false,
+              status: 'paid'
+            })
+            .select()
+            .single();
+
+          if (expErr) throw expErr;
+
+          // Financial movements (33_all distribution)
+          const partners = await db.get('partners');
+          const raul = partners.find(p => p.name === 'Raúl');
+          const nahuel = partners.find(p => p.name === 'Nahuel');
+          const negro = partners.find(p => p.name === 'Negro Añais');
+
+          let financialMovements = [];
+          const split = taxAmount / 3;
+          if (raul) financialMovements.push({ partner_id: raul.id, type: 'expense', amount: -split, related_id: newExp.id, payment_method: 'Transferencia' });
+          if (nahuel) financialMovements.push({ partner_id: nahuel.id, type: 'expense', amount: -split, related_id: newExp.id, payment_method: 'Transferencia' });
+          if (negro) financialMovements.push({ partner_id: negro.id, type: 'expense', amount: -split, related_id: newExp.id, payment_method: 'Transferencia' });
+          
+          if (financialMovements.length > 0) {
+            const { error: finErr } = await supabase
+              .from('financial_movements')
+              .insert(financialMovements);
+            if (finErr) throw finErr;
+          }
+        }
+      } else if (!oldIsCash && newIsCash) {
+        // Transition from Digital to Cash -> Delete tax expense and splits
+        const { data: existingExp } = await supabase
+          .from('expenses')
+          .select('id')
+          .eq('description', desc)
+          .maybeSingle();
+
+        if (existingExp) {
+          // Delete financial movements
+          const { error: delFinErr } = await supabase
+            .from('financial_movements')
+            .delete()
+            .eq('related_id', existingExp.id);
+          if (delFinErr) throw delFinErr;
+
+          // Delete expense
+          const { error: delExpErr } = await supabase
+            .from('expenses')
+            .delete()
+            .eq('id', existingExp.id);
+          if (delExpErr) throw delExpErr;
+        }
+      }
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     processSale,
+    updateSalePaymentMethod,
     loading,
     error
   };
