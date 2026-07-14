@@ -47,7 +47,7 @@ export default function PointOfSale() {
     try {
       const { data, error } = await supabase
         .from('sales')
-        .select('id, sale_number, total_amount, payment_method, date')
+        .select('id, sale_number, total_amount, payment_method, date, status')
         .gte('date', activeRegister.opened_at)
         .order('date', { ascending: false });
       if (error) throw error;
@@ -471,45 +471,52 @@ export default function PointOfSale() {
                   </tr>
                 </thead>
                 <tbody>
-                  {todaySales.map(sale => (
-                    <tr key={sale.id}>
-                      <td style={{ paddingLeft: '0', fontWeight: '500' }}>#{sale.sale_number}</td>
-                      <td>{new Date(sale.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span className={`${styles.paymentBadge} ${
-                            sale.payment_method === 'Efectivo' ? styles.badgeCash : styles.badgeDigital
-                          }`}>
-                            {sale.payment_method}
-                          </span>
-                          <button 
-                            onClick={() => {
-                              setEditingSale(sale);
-                              setNewPaymentMethod(sale.payment_method);
-                            }}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: 'var(--color-text-secondary)',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              padding: '2px',
-                              borderRadius: '4px',
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.color = 'var(--color-primary)'}
-                            onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}
-                            title="Editar Método de Pago"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                      <td style={{ textAlign: 'right', paddingRight: '0', fontWeight: 'bold' }}>
-                        ${parseFloat(sale.total_amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  ))}
+                   {todaySales.map(sale => {
+                    const isCancelled = sale.status === 'cancelled';
+                    return (
+                      <tr key={sale.id} style={isCancelled ? { opacity: 0.6 } : {}}>
+                        <td style={{ paddingLeft: '0', fontWeight: '500', textDecoration: isCancelled ? 'line-through' : 'none' }}>#{sale.sale_number}</td>
+                        <td style={{ textDecoration: isCancelled ? 'line-through' : 'none' }}>{new Date(sale.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span className={`${styles.paymentBadge} ${
+                              isCancelled 
+                                ? styles.badgeCancelled 
+                                : sale.payment_method === 'Efectivo' ? styles.badgeCash : styles.badgeDigital
+                            }`}>
+                              {isCancelled ? 'Cancelada' : sale.payment_method}
+                            </span>
+                            {!isCancelled && (
+                              <button 
+                                onClick={() => {
+                                  setEditingSale(sale);
+                                  setNewPaymentMethod(sale.payment_method);
+                                }}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: 'var(--color-text-secondary)',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  padding: '2px',
+                                  borderRadius: '4px',
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.color = 'var(--color-primary)'}
+                                onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}
+                                title="Editar Método de Pago"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'right', paddingRight: '0', fontWeight: 'bold', textDecoration: isCancelled ? 'line-through' : 'none' }}>
+                          ${parseFloat(sale.total_amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

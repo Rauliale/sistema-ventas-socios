@@ -66,7 +66,8 @@ export function useCashRegister() {
         .from('sales')
         .select('payment_method, total_amount')
         .gte('date', reg.opened_at)
-        .lte('date', new Date().toISOString());
+        .lte('date', new Date().toISOString())
+        .neq('status', 'cancelled');
 
       if (salesErr) throw salesErr;
 
@@ -136,7 +137,8 @@ export function useCashRegister() {
         .from('sales')
         .select('payment_method, total_amount')
         .gte('date', activeRegister.opened_at)
-        .lte('date', new Date().toISOString());
+        .lte('date', new Date().toISOString())
+        .neq('status', 'cancelled');
 
     if (salesErr) throw salesErr;
 
