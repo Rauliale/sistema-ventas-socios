@@ -21,7 +21,7 @@ function AppContent({ children }) {
   const pathname = usePathname();
   const { profile, logout } = useAuth();
   
-  if (pathname === '/login') {
+  if (pathname === '/login' || pathname === '/consulta-precios') {
     return <main>{children}</main>;
   }
 
@@ -47,6 +47,7 @@ function AppContent({ children }) {
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem', flex: 1 }}>
           <Link href="/">📊 Dashboard</Link>
           <Link href="/pos">🛒 Punto de Venta</Link>
+          <Link href="/consulta-precios">🔍 Consulta de Precios</Link>
           <Link href="/compras">📦 Compras</Link>
           <Link href="/productos">📋 Productos</Link>
           <Link href="/gastos">💸 Gastos</Link>
