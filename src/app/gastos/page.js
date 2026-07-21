@@ -12,8 +12,10 @@ export default function Gastos() {
   const [activeTab, setActiveTab] = useState('gastos'); // 'gastos' | 'prestamos'
   
   // ================= EXPENDITURES STATE =================
-  const { expenses, categories, loading: loadingExp, addExpense, markExpenseAsPaid } = useExpenses();
+  const { expenses, categories, loading: loadingExp, addExpense, markExpenseAsPaid, updateExpenseAmount } = useExpenses();
   const [showExpForm, setShowExpForm] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState(null);
+  const [editAmount, setEditAmount] = useState('');
   const [expFormData, setExpFormData] = useState({
     description: '',
     category_id: '',
@@ -38,11 +40,32 @@ export default function Gastos() {
     }
   };
 
+  const handleEditAmountSubmit = async (expenseId) => {
+    if (!editAmount || isNaN(editAmount)) return alert("Importe inválido");
+    try {
+      await updateExpenseAmount(expenseId, editAmount);
+      setEditingExpenseId(null);
+      setEditAmount('');
+    } catch (err) {
+      alert("Error al editar gasto: " + err.message);
+    }
+  };
+
+
   const expColumns = [
     { header: 'Fecha', accessor: 'date', render: row => new Date(row.date).toLocaleDateString() },
     { header: 'Categoría', accessor: 'categoryName', render: row => row.expense_categories?.name },
     { header: 'Descripción', accessor: 'description' },
-    { header: 'Importe ($)', accessor: 'amount' },
+    { header: 'Importe ($)', accessor: 'amount', render: row => (
+        <div>
+          {row.amount}
+          {row.is_edited && (
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-danger)' }}>
+              (Editado, antes: ${row.original_amount})
+            </div>
+          )}
+        </div>
+    )},
     { header: 'Distribución', accessor: 'shared_type' },
     { header: 'Estado', accessor: 'status', render: row => (
         <span style={{ color: row.status === 'paid' ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 'bold' }}>
@@ -50,9 +73,26 @@ export default function Gastos() {
         </span>
     )},
     { header: 'Acción', accessor: 'action', render: row => (
-        row.status === 'pending' ? (
-          <Button onClick={() => markExpenseAsPaid(row.id)}>Saldar</Button>
-        ) : null
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {row.status === 'pending' && (
+            <Button onClick={() => markExpenseAsPaid(row.id)}>Saldar</Button>
+          )}
+          {editingExpenseId === row.id ? (
+             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+               <input 
+                 type="number" 
+                 step="0.01" 
+                 value={editAmount} 
+                 onChange={(e) => setEditAmount(e.target.value)} 
+                 style={{ width: '80px', padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--color-border)' }}
+               />
+               <Button onClick={() => handleEditAmountSubmit(row.id)}>Ok</Button>
+               <Button onClick={() => setEditingExpenseId(null)} style={{ background: 'var(--color-danger)' }}>X</Button>
+             </div>
+          ) : (
+             <Button onClick={() => { setEditingExpenseId(row.id); setEditAmount(row.amount); }}>Editar</Button>
+          )}
+        </div>
     )}
   ];
 
