@@ -15,7 +15,7 @@ import styles from './page.module.css';
 
 export default function PointOfSale() {
   const { products, loading: productsLoading } = useProducts();
-  const { processSale, loading: saleLoading } = useSales();
+  const { processSale, updateSalePaymentMethod, loading: saleLoading } = useSales();
   const { user } = useAuth();
   
   const { activeRegister, loading: registerLoading, openRegister, closeRegister, getClosurePreview } = useCashRegister();
