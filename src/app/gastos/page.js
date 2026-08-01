@@ -13,17 +13,25 @@ export default function Gastos() {
   const [activeTab, setActiveTab] = useState('gastos'); // 'gastos' | 'prestamos'
   
   // ================= EXPENDITURES STATE =================
-  const { expenses, categories, loading: loadingExp, addExpense, markExpenseAsPaid, updateExpenseAmount } = useExpenses();
+  const { expenses, categories, loading, error, addExpense, markExpenseAsPaid, updateExpenseAmount, splitExpense } = useExpenses();
   const [showExpForm, setShowExpForm] = useState(false);
-  const [editingExpenseId, setEditingExpenseId] = useState(null);
-  const [editAmount, setEditAmount] = useState('');
   const [expFormData, setExpFormData] = useState({
     description: '',
     category_id: '',
-    amount: 0,
+    amount: '',
     shared_type: '50/50',
     payment_method: 'Efectivo'
   });
+  const [expenseSubmitting, setExpenseSubmitting] = useState(false);
+
+  const [editingExpenseId, setEditingExpenseId] = useState(null);
+  const [editAmount, setEditAmount] = useState('');
+
+  const [showSplitModal, setShowSplitModal] = useState(false);
+  const [splitExpenseId, setSplitExpenseId] = useState(null);
+  const [splitParts, setSplitParts] = useState([{ amount: '', payment_method: 'Efectivo' }]);
+  const [splitSubmitting, setSplitSubmitting] = useState(false);
+  const [splitOriginalAmount, setSplitOriginalAmount] = useState(0);
 
   const handleExpSubmit = async (e) => {
     e.preventDefault();
@@ -53,10 +61,50 @@ export default function Gastos() {
       setEditingExpenseId(null);
       setEditAmount('');
     } catch (err) {
-      alert("Error al editar gasto: " + err.message);
+      alert("Error al actualizar: " + err.message);
     }
   };
 
+  const handleAddSplitPart = () => {
+    setSplitParts([...splitParts, { amount: '', payment_method: 'Efectivo' }]);
+  };
+
+  const handleRemoveSplitPart = (index) => {
+    setSplitParts(splitParts.filter((_, i) => i !== index));
+  };
+
+  const handleSplitPartChange = (index, field, value) => {
+    const newParts = [...splitParts];
+    newParts[index][field] = value;
+    setSplitParts(newParts);
+  };
+
+  const handleSplitSubmit = async (e) => {
+    e.preventDefault();
+    if (splitParts.length < 2) return alert("Debes agregar al menos 2 partes");
+    
+    let total = 0;
+    for (let p of splitParts) {
+      if (!p.amount || isNaN(p.amount)) return alert("Monto inválido en una de las partes");
+      total += parseFloat(p.amount);
+    }
+    
+    if (Math.abs(total - splitOriginalAmount) > 0.01) {
+       const confirm = window.confirm(`El total dividido ($${total}) no coincide con el original ($${splitOriginalAmount}). ¿Deseas continuar y cambiar el total del gasto?`);
+       if (!confirm) return;
+    }
+
+    try {
+      setSplitSubmitting(true);
+      await splitExpense(splitExpenseId, splitParts);
+      setShowSplitModal(false);
+      setSplitExpenseId(null);
+    } catch (err) {
+      alert("Error al dividir el gasto: " + err.message);
+    } finally {
+      setSplitSubmitting(false);
+    }
+  };
 
   const expColumns = [
     { header: 'Fecha', accessor: 'date', render: row => new Date(row.date).toLocaleDateString() },
@@ -96,7 +144,18 @@ export default function Gastos() {
                <Button onClick={() => setEditingExpenseId(null)} style={{ background: 'var(--color-danger)' }}>X</Button>
              </div>
           ) : (
-             <Button onClick={() => { setEditingExpenseId(row.id); setEditAmount(row.amount); }}>Editar</Button>
+             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+               <Button onClick={() => { setEditingExpenseId(row.id); setEditAmount(row.amount); }}>Editar</Button>
+               <Button style={{ background: 'var(--color-secondary)' }} onClick={() => {
+                 setSplitExpenseId(row.id);
+                 setSplitOriginalAmount(row.amount);
+                 setSplitParts([
+                   { amount: row.amount, payment_method: 'Efectivo' },
+                   { amount: '', payment_method: 'Transferencia' }
+                 ]);
+                 setShowSplitModal(true);
+               }}>Dividir</Button>
+             </div>
           )}
         </div>
     )}
@@ -287,7 +346,7 @@ export default function Gastos() {
           )}
 
           <Card title="Historial de Gastos">
-            {loadingExp ? <p>Cargando gastos...</p> : <Table columns={expColumns} data={expenses} />}
+            {loading ? <p>Cargando gastos...</p> : <Table columns={expColumns} data={expenses} />}
           </Card>
         </>
       )}
@@ -381,6 +440,68 @@ export default function Gastos() {
             {loadingPersonal ? <p>Cargando gastos personales...</p> : <Table columns={personalColumns} data={personalExpenses} />}
           </Card>
         </>
+      )}
+
+      {showSplitModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent} style={{ maxWidth: '600px' }}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Dividir Pago de Gasto</h2>
+              <button className={styles.closeButton} onClick={() => setShowSplitModal(false)}>
+                X
+              </button>
+            </div>
+            
+            <form onSubmit={handleSplitSubmit}>
+              <p style={{ marginBottom: '1rem', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+                Total original: <strong>${parseFloat(splitOriginalAmount).toLocaleString('es-AR')}</strong>
+                <br/>
+                Total actualizado: <strong>${splitParts.reduce((acc, p) => acc + (parseFloat(p.amount) || 0), 0).toLocaleString('es-AR')}</strong>
+              </p>
+
+              {splitParts.map((part, index) => (
+                <div key={index} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1rem', background: 'var(--color-background-secondary)', padding: '1rem', borderRadius: '8px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem', color: 'var(--color-text-secondary)' }}>Monto de Parte {index + 1}</label>
+                    <Input 
+                      type="number" 
+                      step="0.01" 
+                      value={part.amount} 
+                      onChange={(e) => handleSplitPartChange(index, 'amount', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem', color: 'var(--color-text-secondary)' }}>Forma de Pago</label>
+                    <select
+                      value={part.payment_method}
+                      onChange={(e) => handleSplitPartChange(index, 'payment_method', e.target.value)}
+                      style={{ width: '100%', padding: '0.6rem', borderRadius: '4px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-background)' }}
+                    >
+                      <option value="Efectivo">💵 Efectivo (Caja Diaria)</option>
+                      <option value="Caja Comun">💰 Efectivo (Caja Común)</option>
+                      <option value="Transferencia">🏦 Transferencia / Banco</option>
+                    </select>
+                  </div>
+                  {splitParts.length > 2 && (
+                    <Button type="button" onClick={() => handleRemoveSplitPart(index)} style={{ background: 'var(--color-danger)', marginBottom: '4px' }}>X</Button>
+                  )}
+                </div>
+              ))}
+              
+              <Button type="button" onClick={handleAddSplitPart} style={{ marginBottom: '1.5rem', background: 'transparent', color: 'var(--color-primary)', border: '1px solid var(--color-primary)' }}>
+                + Añadir otra forma de pago
+              </Button>
+              
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', borderTop: '1px solid var(--color-border)', paddingTop: '1rem' }}>
+                <Button type="button" onClick={() => setShowSplitModal(false)} style={{ background: 'var(--color-background-secondary)', color: 'var(--color-text)' }}>Cancelar</Button>
+                <Button type="submit" disabled={splitSubmitting}>
+                  {splitSubmitting ? 'Procesando...' : 'Dividir Gasto'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
