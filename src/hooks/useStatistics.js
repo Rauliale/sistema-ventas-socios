@@ -18,8 +18,6 @@ export function useStatistics(period = 'month') {
       // Determine date range based on period
       const now = new Date();
       let startDate = new Date();
-      let prevStartDate = new Date();
-      let prevEndDate = new Date();
 
       if (period === 'day') {
         startDate.setHours(0, 0, 0, 0);
@@ -38,7 +36,7 @@ export function useStatistics(period = 'month') {
         isoStart = '2026-07-01T00:00:00.000Z';
       }
 
-      // 1. Fetch Sales Items from view
+      // 1. Fetch Sales Items from view (paid sales only)
       const { data: saleItems, error: salesErr } = await supabase
         .from('vw_sales_details')
         .select('*')
@@ -47,30 +45,40 @@ export function useStatistics(period = 'month') {
         
       if (salesErr) throw salesErr;
 
-      // 2. Fetch Unique Sales (Tickets) for Average Ticket calculation
+      // 2. Fetch Unique Sales with payment_method
       const { data: uniqueSales, error: uniqErr } = await supabase
         .from('sales')
-        .select('id, total_amount')
+        .select('id, total_amount, payment_method, date')
         .gte('date', isoStart)
         .eq('status', 'paid');
 
       if (uniqErr) throw uniqErr;
 
-      // 3. Fetch Expenses for Break-Even
+      // 3. Fetch Expenses
       const { data: expenses, error: expErr } = await supabase
         .from('expenses')
-        .select('amount')
-        .gte('created_at', isoStart);
+        .select('amount, paid_from_register, status, category_id, expense_categories(name)')
+        .gte('date', isoStart)
+        .eq('status', 'paid');
 
       if (expErr) throw expErr;
 
-      // 4. Fetch Purchases (product_lots) for Partner contributions
-      // This is not filtered by date, as the user wants historical total participation.
+      // 4. Fetch All Active Product Lots for Mercadería / Stock Valuation
       const { data: lots, error: lotsErr } = await supabase
         .from('product_lots')
-        .select('quantity, cost_price, partners(name)');
+        .select('quantity, cost_price, partner_id, partners(name), products(sale_price)')
+        .gt('quantity', 0);
 
       if (lotsErr) throw lotsErr;
+
+      // 5. Fetch Financial Movements for Cash/Transfer net calculation in period
+      const { data: finMovs, error: finErr } = await supabase
+        .from('financial_movements')
+        .select('*')
+        .gte('date', isoStart)
+        .eq('status', 'paid');
+
+      if (finErr) throw finErr;
 
       // --- CALCULATIONS ---
 
@@ -78,22 +86,84 @@ export function useStatistics(period = 'month') {
       const totalRevenue = saleItems.reduce((acc, item) => acc + (parseFloat(item.total_revenue) || 0), 0);
       const totalNetProfit = saleItems.reduce((acc, item) => acc + (parseFloat(item.net_profit) || 0), 0);
       const salesCount = uniqueSales.length;
-      
-      // B. Average Ticket
       const averageTicket = salesCount > 0 ? (totalRevenue / salesCount) : 0;
-
-      // C. Profit Margin (%)
       const profitMarginPercentage = totalRevenue > 0 ? (totalNetProfit / totalRevenue) : 0;
 
-      // D. Expenses & Break-Even
+      // B. Payment Method Breakdown & Net Funds
+      const salesByPaymentMethod = {};
+      uniqueSales.forEach(s => {
+        const method = s.payment_method || 'Otros';
+        const amt = parseFloat(s.total_amount) || 0;
+        salesByPaymentMethod[method] = (salesByPaymentMethod[method] || 0) + amt;
+      });
+
+      let salesCash = salesByPaymentMethod['Efectivo'] || 0;
+      let salesTransfer = totalRevenue - salesCash;
+
+      let expensesCash = 0;
+      let expensesTransfer = 0;
+      expenses.forEach(e => {
+        const amt = parseFloat(e.amount) || 0;
+        if (e.paid_from_register) {
+          expensesCash += amt;
+        } else {
+          expensesTransfer += amt;
+        }
+      });
+
+      let withdrawalsCash = 0;
+      let withdrawalsTransfer = 0;
+      let investmentsCash = 0;
+      let investmentsTransfer = 0;
+
+      (finMovs || []).forEach(m => {
+        const amt = parseFloat(m.amount) || 0;
+        if (m.type === 'withdrawal') {
+          if (m.payment_method === 'Efectivo') withdrawalsCash += amt;
+          else withdrawalsTransfer += amt;
+        } else if (m.type === 'investment' && !m.related_id) {
+          if (m.payment_method === 'Efectivo') investmentsCash += amt;
+          else investmentsTransfer += amt;
+        }
+      });
+
+      const netCashBalance = salesCash - expensesCash + withdrawalsCash + investmentsCash;
+      const netTransferBalance = salesTransfer - expensesTransfer + withdrawalsTransfer + investmentsTransfer;
+
+      // C. Expenses Breakdown
       const totalExpenses = expenses.reduce((acc, exp) => acc + (parseFloat(exp.amount) || 0), 0);
-      
-      // Break-Even = Fixed Costs / Profit Margin
-      // If margin is 50% (0.5), and expenses $1000 => Break even is $2000 in sales.
+      const expensesByCategory = {};
+      expenses.forEach(exp => {
+        const catName = exp.expense_categories?.name || 'General';
+        const amt = parseFloat(exp.amount) || 0;
+        expensesByCategory[catName] = (expensesByCategory[catName] || 0) + amt;
+      });
+
+      // Break-Even
       let breakEvenPoint = 0;
       if (profitMarginPercentage > 0) {
         breakEvenPoint = totalExpenses / profitMarginPercentage;
       }
+
+      // D. Mercadería Valuation
+      let totalInventoryCost = 0;
+      let totalInventorySaleValue = 0;
+      const partnerInvestments = {};
+
+      lots.forEach(lot => {
+        const partnerName = lot.partners?.name || 'Desconocido';
+        const qty = lot.quantity || 0;
+        const cost = parseFloat(lot.cost_price || 0);
+        const salePrice = parseFloat(lot.products?.sale_price || 0);
+
+        const investmentCost = qty * cost;
+        const potentialSale = qty * salePrice;
+
+        totalInventoryCost += investmentCost;
+        totalInventorySaleValue += potentialSale;
+
+        partnerInvestments[partnerName] = (partnerInvestments[partnerName] || 0) + investmentCost;
+      });
 
       // E. Product Performance
       const productPerformance = {};
@@ -115,25 +185,17 @@ export function useStatistics(period = 'month') {
         .sort((a, b) => b.profit - a.profit)
         .slice(0, 10);
 
-      // F. Partner Purchases (Investments)
-      const partnerInvestments = {};
-      lots.forEach(lot => {
-        const partnerName = lot.partners?.name || 'Desconocido';
-        const investment = lot.quantity * parseFloat(lot.cost_price || 0);
-        partnerInvestments[partnerName] = (partnerInvestments[partnerName] || 0) + investment;
-      });
-
-      // G. Projections (24 working days)
+      // F. Projections (24 working days)
       let daysPassed = 1;
       if (period === 'month') {
         daysPassed = now.getDate();
       } else if (period === 'week') {
-        daysPassed = now.getDay() || 7; // 1 to 7 (Sunday = 7)
+        daysPassed = now.getDay() || 7;
       }
       
       const averageDailySales = totalRevenue / Math.max(1, daysPassed);
       const projectedSales = averageDailySales * 24;
-      const projectedMargin = projectedSales * profitMarginPercentage; // Usando porcentaje real
+      const projectedMargin = projectedSales * profitMarginPercentage;
 
       setStats({
         totalRevenue,
@@ -141,8 +203,18 @@ export function useStatistics(period = 'month') {
         salesCount,
         averageTicket,
         profitMarginPercentage,
+        salesByPaymentMethod,
+        salesCash,
+        salesTransfer,
+        netCashBalance,
+        netTransferBalance,
         totalExpenses,
+        expensesCash,
+        expensesTransfer,
+        expensesByCategory,
         breakEvenPoint,
+        totalInventoryCost,
+        totalInventorySaleValue,
         topProductsByQuantity,
         topProductsByProfit,
         partnerInvestments,
