@@ -168,7 +168,7 @@ export function useStatistics(period = 'month') {
       ] = await Promise.all([
         supabase.from('sales').select('total_amount, payment_method, status').gte('date', globalStartIso),
         supabase.from('expenses').select('amount, paid_from_register, status').gte('date', globalStartIso),
-        supabase.from('financial_movements').select('amount, type, payment_method, status').gte('date', globalStartIso)
+        supabase.from('financial_movements').select('amount, type, payment_method, status, related_id').gte('date', globalStartIso)
       ]);
 
       // --- FILTERING (IN-MEMORY SAFE) ---
