@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useExpenses } from '../../hooks/useExpenses';
 import { useLoans } from '../../hooks/useLoans';
+import { usePersonalExpenses } from '../../hooks/usePersonalExpenses';
 
 export default function Gastos() {
   const [activeTab, setActiveTab] = useState('gastos'); // 'gastos' | 'prestamos'
@@ -150,6 +151,38 @@ export default function Gastos() {
     )}
   ];
 
+  // ================= PERSONAL EXPENSES STATE =================
+  const { personalExpenses, loading: loadingPersonal, addPersonalExpense } = usePersonalExpenses();
+  const [showPersonalForm, setShowPersonalForm] = useState(false);
+  const [personalFormData, setPersonalFormData] = useState({
+    description: '',
+    amount: '',
+    payment_method: 'Efectivo'
+  });
+
+  const handlePersonalSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await addPersonalExpense({
+        description: personalFormData.description,
+        amount: parseFloat(personalFormData.amount),
+        payment_method: personalFormData.payment_method
+      });
+      setShowPersonalForm(false);
+      setPersonalFormData({ description: '', amount: '', payment_method: 'Efectivo' });
+      alert("Gasto personal registrado exitosamente");
+    } catch (err) {
+      alert("Error al registrar gasto personal: " + err.message);
+    }
+  };
+
+  const personalColumns = [
+    { header: 'Fecha', accessor: 'created_at', render: row => new Date(row.created_at).toLocaleDateString() },
+    { header: 'Descripción', accessor: 'description' },
+    { header: 'Importe ($)', accessor: 'amount' },
+    { header: 'Forma de Pago', accessor: 'payment_method' }
+  ];
+
   return (
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -179,6 +212,12 @@ export default function Gastos() {
           style={{ background: 'none', border: 'none', fontSize: '1.1rem', fontWeight: activeTab === 'prestamos' ? 'bold' : 'normal', color: activeTab === 'prestamos' ? 'var(--color-primary)' : 'var(--color-text-secondary)', cursor: 'pointer', padding: '0.5rem 1rem' }}
         >
           Agenda de Préstamos
+        </button>
+        <button 
+          onClick={() => setActiveTab('personales')}
+          style={{ background: 'none', border: 'none', fontSize: '1.1rem', fontWeight: activeTab === 'personales' ? 'bold' : 'normal', color: activeTab === 'personales' ? 'var(--color-primary)' : 'var(--color-text-secondary)', cursor: 'pointer', padding: '0.5rem 1rem' }}
+        >
+          Gastos Personales
         </button>
       </div>
 
@@ -295,6 +334,44 @@ export default function Gastos() {
                 data={installments.filter(i => i.status === 'pending').concat(installments.filter(i => i.status === 'paid'))} 
               />
             )}
+          </Card>
+        </>
+      )}
+
+      {/* PERSONALES TAB */}
+      {activeTab === 'personales' && (
+        <>
+          {showPersonalForm && (
+            <Card title="Nuevo Gasto Personal" style={{ marginBottom: '2rem' }}>
+              <form onSubmit={handlePersonalSubmit}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', alignItems: 'end' }}>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <Input label="Descripción breve *" value={personalFormData.description} onChange={e => setPersonalFormData({...personalFormData, description: e.target.value})} required />
+                  </div>
+                  <div>
+                    <Input label="Monto *" type="number" step="0.01" value={personalFormData.amount} onChange={e => setPersonalFormData({...personalFormData, amount: e.target.value})} required />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.875rem', fontWeight: '500', display: 'block', marginBottom: '4px' }}>Forma de Pago</label>
+                    <select 
+                      value={personalFormData.payment_method}
+                      onChange={e => setPersonalFormData({...personalFormData, payment_method: e.target.value})}
+                      style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--color-border)' }}
+                    >
+                      <option value="Efectivo">💵 Efectivo</option>
+                      <option value="Transferencia">🏦 Transferencia</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ marginTop: '1.5rem' }}>
+                  <Button type="submit">Guardar Gasto Personal</Button>
+                </div>
+              </form>
+            </Card>
+          )}
+
+          <Card title="Mis Gastos Personales">
+            {loadingPersonal ? <p>Cargando gastos personales...</p> : <Table columns={personalColumns} data={personalExpenses} />}
           </Card>
         </>
       )}
