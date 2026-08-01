@@ -150,6 +150,15 @@ export function useStatistics(period = 'month') {
 
       if (techErr) throw techErr;
 
+      // 7. Fetch Purchases of the period
+      const { data: periodPurchases, error: purchErr } = await supabase
+        .from('purchases')
+        .select('total_amount, partners(name)')
+        .gte('date', startIso)
+        .lte('date', endIso);
+
+      if (purchErr) throw purchErr;
+
       // --- FILTERING (IN-MEMORY SAFE) ---
       const validSales = (uniqueSalesData || []).filter(s => 
         s.status !== 'pending' && s.status !== 'cancelled'
@@ -285,6 +294,15 @@ export function useStatistics(period = 'month') {
         technicalServices.byPartner[partnerName] = (technicalServices.byPartner[partnerName] || 0) + amt;
       });
 
+      // H. Purchases per Partner (Period)
+      const periodPurchasesTotal = { total: 0, byPartner: {} };
+      (periodPurchases || []).forEach(p => {
+        const partnerName = p.partners?.name || 'Desconocido';
+        const amt = parseFloat(p.total_amount || 0);
+        periodPurchasesTotal.total += amt;
+        periodPurchasesTotal.byPartner[partnerName] = (periodPurchasesTotal.byPartner[partnerName] || 0) + amt;
+      });
+
       // Period Label
       const nowObj = new Date();
       let periodLabel = 'Este Mes';
@@ -321,7 +339,8 @@ export function useStatistics(period = 'month') {
         averageDailySales,
         projectedSales,
         projectedMargin,
-        technicalServices
+        technicalServices,
+        periodPurchasesTotal
       });
 
     } catch (err) {

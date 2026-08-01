@@ -307,6 +307,31 @@ export default function StatisticsPage() {
                 {formatCurrency(stats.averageTicket)}
               </div>
             </div>
+
+            <div className={styles.statCard} style={{ borderLeft: `4px solid ${stats.totalNetProfit - stats.totalExpenses >= 0 ? 'var(--color-success)' : 'var(--color-danger)'}` }}>
+              <div className={styles.statTitle}>Balance Neto (Ganancia vs Gastos)</div>
+              <div className={`${styles.statValue} ${stats.totalNetProfit - stats.totalExpenses >= 0 ? styles.success : styles.danger}`}>
+                {formatCurrency(stats.totalNetProfit - stats.totalExpenses)}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
+                {stats.totalNetProfit - stats.totalExpenses >= 0 ? 'Gastos cubiertos' : 'Pérdida en el período'}
+              </div>
+            </div>
+
+            <div className={styles.statCard} style={{ borderLeft: '4px solid #8b5cf6' }}>
+              <div className={styles.statTitle}>Total Compras Mensuales</div>
+              <div className={styles.statValue} style={{ color: '#8b5cf6' }}>
+                {formatCurrency(stats.periodPurchasesTotal?.total || 0)}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
+                {Object.entries(stats.periodPurchasesTotal?.byPartner || {}).length > 0 ? 
+                  Object.entries(stats.periodPurchasesTotal.byPartner).map(([partner, amt]) => (
+                    <span key={partner} style={{ display: 'inline-block', marginRight: '0.5rem' }}>
+                      {partner}: {formatCurrency(amt)}
+                    </span>
+                  )) : 'Sin compras registradas'}
+              </div>
+            </div>
           </div>
 
           {/* GASTOS POR CATEGORÍA */}
