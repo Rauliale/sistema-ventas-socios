@@ -5,6 +5,11 @@ import { useStatistics } from '../../hooks/useStatistics';
 import { Card } from '../../components/ui/Card';
 import styles from './page.module.css';
 
+const MONTH_NAMES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
 export default function StatisticsPage() {
   const [period, setPeriod] = useState('month');
   const { stats, loading, error } = useStatistics(period);
@@ -17,11 +22,27 @@ export default function StatisticsPage() {
     return new Intl.NumberFormat('es-AR', { style: 'percent', maximumFractionDigits: 1 }).format(val || 0);
   };
 
-  const getPeriodLabel = () => {
-    if (period === 'day') return 'Hoy';
-    if (period === 'week') return 'Esta Semana';
-    return 'Este Mes';
+  const generateMonthOptions = () => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const options = [];
+
+    // Past 12 months
+    for (let i = 0; i < 12; i++) {
+      let d = new Date(currentYear, currentMonth - i, 1);
+      let y = d.getFullYear();
+      let mIdx = d.getMonth();
+      let monthNum = String(mIdx + 1).padStart(2, '0');
+      let val = `${y}-${monthNum}`;
+      let label = `${MONTH_NAMES[mIdx]} ${y}`;
+      options.push({ value: val, label });
+    }
+
+    return options;
   };
+
+  const displayPeriodLabel = stats?.periodLabel || 'Este Mes';
 
   return (
     <div className="page-container">
@@ -31,11 +52,28 @@ export default function StatisticsPage() {
           <select 
             value={period} 
             onChange={(e) => setPeriod(e.target.value)}
-            style={{ padding: '0.5rem 1rem', borderRadius: '6px', border: '1px solid var(--color-border)', fontSize: '1rem', fontWeight: '500' }}
+            style={{ 
+              padding: '0.6rem 1rem', 
+              borderRadius: '6px', 
+              border: '1px solid var(--color-border)', 
+              fontSize: '1rem', 
+              fontWeight: '500',
+              backgroundColor: 'var(--color-surface)',
+              cursor: 'pointer'
+            }}
           >
-            <option value="day">Hoy</option>
-            <option value="week">Esta Semana</option>
-            <option value="month">Este Mes</option>
+            <optgroup label="Filtros Rápidos">
+              <option value="day">Hoy</option>
+              <option value="week">Esta Semana</option>
+              <option value="month">Este Mes Actual</option>
+            </optgroup>
+            <optgroup label="Histórico por Mes">
+              {generateMonthOptions().map(opt => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </optgroup>
           </select>
         </div>
       </div>
@@ -47,11 +85,11 @@ export default function StatisticsPage() {
       ) : (
         <>
           {/* SECCIÓN 1: DINERO EN CAJA Y FONDOS POR MEDIO DE PAGO */}
-          <h2 className={styles.sectionTitle}>💰 Dinero en Caja y Fondos ({getPeriodLabel()})</h2>
+          <h2 className={styles.sectionTitle}>💰 Dinero en Caja y Fondos ({displayPeriodLabel})</h2>
           <div className={styles.dashboardGrid} style={{ marginBottom: '2rem' }}>
             <div className={styles.statCard} style={{ borderLeft: '4px solid var(--color-success)' }}>
-              <div className={styles.statTitle}>Efectivo en Caja ({getPeriodLabel()})</div>
-              <div className={`${styles.statValue} ${styles.success}`}>
+              <div className={styles.statTitle}>Efectivo en Caja ({displayPeriodLabel})</div>
+              <div className={`${styles.statValue} ${stats.netCashBalance >= 0 ? styles.success : styles.danger}`}>
                 {formatCurrency(stats.netCashBalance)}
               </div>
               <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
@@ -60,8 +98,8 @@ export default function StatisticsPage() {
             </div>
 
             <div className={styles.statCard} style={{ borderLeft: '4px solid var(--color-primary)' }}>
-              <div className={styles.statTitle}>Transferencias / Banco ({getPeriodLabel()})</div>
-              <div className={`${styles.statValue} ${styles.primary}`}>
+              <div className={styles.statTitle}>Transferencias / Banco ({displayPeriodLabel})</div>
+              <div className={`${styles.statValue} ${stats.netTransferBalance >= 0 ? styles.primary : styles.danger}`}>
                 {formatCurrency(stats.netTransferBalance)}
               </div>
               <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
@@ -70,7 +108,7 @@ export default function StatisticsPage() {
             </div>
 
             <div className={styles.statCard} style={{ borderLeft: '4px solid var(--color-danger)' }}>
-              <div className={styles.statTitle}>Gastos Totales ({getPeriodLabel()})</div>
+              <div className={styles.statTitle}>Gastos Totales ({displayPeriodLabel})</div>
               <div className={`${styles.statValue} ${styles.danger}`}>
                 {formatCurrency(stats.totalExpenses)}
               </div>
@@ -82,7 +120,7 @@ export default function StatisticsPage() {
 
           {/* DESGLOSE POR MEDIO DE PAGO */}
           <div style={{ marginBottom: '2.5rem' }}>
-            <Card title={`💳 Ventas por Medio de Pago (${getPeriodLabel()})`}>
+            <Card title={`💳 Ventas por Medio de Pago (${displayPeriodLabel})`}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', padding: '0.5rem 0' }}>
                 {Object.entries(stats.salesByPaymentMethod).length === 0 ? (
                   <p style={{ color: 'var(--color-text-secondary)' }}>Sin ventas registradas en este período.</p>
@@ -135,7 +173,7 @@ export default function StatisticsPage() {
           </div>
 
           {/* SECCIÓN 3: MÉTRICAS GENERALES DE VENTAS Y GANANCIAS */}
-          <h2 className={styles.sectionTitle}>📊 Rendimiento General ({getPeriodLabel()})</h2>
+          <h2 className={styles.sectionTitle}>📊 Rendimiento General ({displayPeriodLabel})</h2>
           <div className={styles.dashboardGrid} style={{ marginBottom: '2rem' }}>
             <div className={styles.statCard}>
               <div className={styles.statTitle}>Ventas Totales</div>
@@ -168,7 +206,7 @@ export default function StatisticsPage() {
           {/* GASTOS POR CATEGORÍA */}
           {Object.keys(stats.expensesByCategory).length > 0 && (
             <div style={{ marginBottom: '2rem' }}>
-              <Card title={`💸 Gastos Desglosados por Categoría (${getPeriodLabel()})`}>
+              <Card title={`💸 Gastos Desglosados por Categoría (${displayPeriodLabel})`}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
                   {Object.entries(stats.expensesByCategory).map(([cat, amount]) => (
                     <div key={cat} style={{ padding: '0.75rem 1rem', backgroundColor: 'var(--color-background)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--color-danger)' }}>
@@ -184,7 +222,7 @@ export default function StatisticsPage() {
           )}
 
           {/* PROYECCIONES */}
-          <h2 className={styles.sectionTitle}>📈 Proyecciones del Mes (Base a ritmo actual)</h2>
+          <h2 className={styles.sectionTitle}>📈 Proyecciones ({displayPeriodLabel})</h2>
           <div className={styles.dashboardGrid} style={{ marginBottom: '2rem' }}>
             <div className={styles.statCard}>
               <div className={styles.statTitle}>Promedio Ventas Diario</div>

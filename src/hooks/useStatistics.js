@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
+const MONTH_NAMES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
+
 export function useStatistics(period = 'month') {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,23 +20,43 @@ export function useStatistics(period = 'month') {
       setLoading(true);
       setError(null);
 
-      // Determine date range based on period
       const now = new Date();
-      let startDate = new Date();
+      let startLocal;
+      let endLocal;
+      let isCurrentMonth = false;
+      let totalDaysInMonth = 30;
 
       if (period === 'day') {
-        startDate.setHours(0, 0, 0, 0);
+        startLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        endLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
       } else if (period === 'week') {
-        const day = startDate.getDay();
-        const diff = startDate.getDate() - day + (day === 0 ? -6 : 1);
-        startDate.setDate(diff);
-        startDate.setHours(0, 0, 0, 0);
+        const day = now.getDay();
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+        startLocal = new Date(now.getFullYear(), now.getMonth(), diff, 0, 0, 0, 0);
+        endLocal = new Date(now.getFullYear(), now.getMonth(), diff + 6, 23, 59, 59, 999);
       } else if (period === 'month') {
-        startDate.setDate(1);
-        startDate.setHours(0, 0, 0, 0);
+        isCurrentMonth = true;
+        startLocal = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        endLocal = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        totalDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      } else if (period.includes('-')) {
+        const [y, m] = period.split('-').map(Number);
+        const currentY = now.getFullYear();
+        const currentM = now.getMonth() + 1;
+        isCurrentMonth = (y === currentY && m === currentM);
+        startLocal = new Date(y, m - 1, 1, 0, 0, 0, 0);
+        endLocal = new Date(y, m, 0, 23, 59, 59, 999);
+        totalDaysInMonth = new Date(y, m, 0).getDate();
+      } else {
+        isCurrentMonth = true;
+        startLocal = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        endLocal = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        totalDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
       }
 
-      let isoStart = startDate.toISOString();
+      let isoStart = startLocal.toISOString();
+      let isoEnd = endLocal.toISOString();
+
       if (isoStart < '2026-07-01T00:00:00.000Z') {
         isoStart = '2026-07-01T00:00:00.000Z';
       }
@@ -41,6 +66,7 @@ export function useStatistics(period = 'month') {
         .from('vw_sales_details')
         .select('*')
         .gte('sale_date', isoStart)
+        .lte('sale_date', isoEnd)
         .eq('status', 'paid');
         
       if (salesErr) throw salesErr;
@@ -50,6 +76,7 @@ export function useStatistics(period = 'month') {
         .from('sales')
         .select('id, total_amount, payment_method, date')
         .gte('date', isoStart)
+        .lte('date', isoEnd)
         .eq('status', 'paid');
 
       if (uniqErr) throw uniqErr;
@@ -57,8 +84,9 @@ export function useStatistics(period = 'month') {
       // 3. Fetch Expenses
       const { data: expenses, error: expErr } = await supabase
         .from('expenses')
-        .select('amount, paid_from_register, status, category_id, expense_categories(name)')
+        .select('amount, paid_from_register, status, category_id, date, expense_categories(name)')
         .gte('date', isoStart)
+        .lte('date', isoEnd)
         .eq('status', 'paid');
 
       if (expErr) throw expErr;
@@ -76,6 +104,7 @@ export function useStatistics(period = 'month') {
         .from('financial_movements')
         .select('*')
         .gte('date', isoStart)
+        .lte('date', isoEnd)
         .eq('status', 'paid');
 
       if (finErr) throw finErr;
@@ -139,7 +168,6 @@ export function useStatistics(period = 'month') {
         expensesByCategory[catName] = (expensesByCategory[catName] || 0) + amt;
       });
 
-      // Break-Even
       let breakEvenPoint = 0;
       if (profitMarginPercentage > 0) {
         breakEvenPoint = totalExpenses / profitMarginPercentage;
@@ -185,19 +213,34 @@ export function useStatistics(period = 'month') {
         .sort((a, b) => b.profit - a.profit)
         .slice(0, 10);
 
-      // F. Projections (24 working days)
+      // F. Projections
       let daysPassed = 1;
-      if (period === 'month') {
-        daysPassed = now.getDate();
+      if (period === 'day') {
+        daysPassed = 1;
       } else if (period === 'week') {
-        daysPassed = now.getDay() || 7;
+        daysPassed = Math.min(now.getDay() || 7, 7);
+      } else if (isCurrentMonth) {
+        daysPassed = Math.max(1, now.getDate());
+      } else {
+        daysPassed = totalDaysInMonth;
       }
-      
+
       const averageDailySales = totalRevenue / Math.max(1, daysPassed);
-      const projectedSales = averageDailySales * 24;
+      const projectedSales = isCurrentMonth ? averageDailySales * 24 : totalRevenue;
       const projectedMargin = projectedSales * profitMarginPercentage;
 
+      // Period Label
+      let periodLabel = 'Este Mes';
+      if (period === 'day') periodLabel = 'Hoy';
+      else if (period === 'week') periodLabel = 'Esta Semana';
+      else if (period === 'month') periodLabel = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+      else if (period.includes('-')) {
+        const [y, m] = period.split('-').map(Number);
+        periodLabel = `${MONTH_NAMES[m - 1]} ${y}`;
+      }
+
       setStats({
+        periodLabel,
         totalRevenue,
         totalNetProfit,
         salesCount,
