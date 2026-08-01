@@ -293,7 +293,7 @@ export default function ReportesVentas() {
                     fill="#8884d8"
                     dataKey="revenue"
                     nameKey="name"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent, value }) => `${name} ${(percent * 100).toFixed(0)}% ($${Number(value).toLocaleString('es-AR', {minimumFractionDigits: 0, maximumFractionDigits: 0})})`}
                   >
                     {partnerStats.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -323,7 +323,7 @@ export default function ReportesVentas() {
                     fill="#82ca9d"
                     dataKey="profit"
                     nameKey="name"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent, value }) => `${name} ${(percent * 100).toFixed(0)}% ($${Number(value).toLocaleString('es-AR', {minimumFractionDigits: 0, maximumFractionDigits: 0})})`}
                   >
                     {partnerStats.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
