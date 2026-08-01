@@ -41,6 +41,13 @@ export default function PointOfSale() {
   const [expenseSubmitting, setExpenseSubmitting] = useState(false);
   const [todaySales, setTodaySales] = useState([]);
 
+  // States for Customer selection & creation
+  const [customers, setCustomers] = useState([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+  const [newCustomerForm, setNewCustomerForm] = useState({ name: '', phone: '' });
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
+
   // States for editing sale payment method
   const [editingSale, setEditingSale] = useState(null);
   const [newPaymentMethod, setNewPaymentMethod] = useState('');
@@ -61,8 +68,50 @@ export default function PointOfSale() {
     }
   };
 
+  const fetchCustomers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .order('name', { ascending: true });
+      if (error) throw error;
+      setCustomers(data || []);
+    } catch (err) {
+      console.error("Error al cargar clientes:", err);
+    }
+  };
+
+  const handleCreateCustomer = async (e) => {
+    e.preventDefault();
+    if (!newCustomerForm.name.trim()) return;
+    try {
+      setCreatingCustomer(true);
+      const { data, error } = await supabase
+        .from('customers')
+        .insert({
+          name: newCustomerForm.name.trim(),
+          phone: newCustomerForm.phone.trim() || null
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setCustomers(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      setSelectedCustomerId(data.id);
+      setShowNewCustomerModal(false);
+      setNewCustomerForm({ name: '', phone: '' });
+      setMessage({ type: 'success', text: `Cliente "${data.name}" agregado y seleccionado.` });
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Error al crear cliente: ' + err.message });
+    } finally {
+      setCreatingCustomer(false);
+    }
+  };
+
   useEffect(() => {
     fetchTodaySales();
+    fetchCustomers();
   }, [activeRegister]);
 
   const handleBarcodeChange = (e) => {
@@ -144,15 +193,26 @@ export default function PointOfSale() {
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
+    if (paymentMethod === 'Cuenta Corriente' && !selectedCustomerId) {
+      setMessage({ type: 'error', text: 'Debes seleccionar o crear un Cliente para vender en Cuenta Corriente.' });
+      return;
+    }
+
     try {
-      await processSale(user?.id, null, paymentMethod, cart.map(i => ({
+      await processSale(user?.id, selectedCustomerId || null, paymentMethod, cart.map(i => ({
         product_id: i.product_id,
         quantity: i.quantity,
         unit_price: i.unit_price
       })));
       
-      setMessage({ type: 'success', text: 'Venta registrada con éxito' });
+      setMessage({ 
+        type: 'success', 
+        text: paymentMethod === 'Cuenta Corriente' 
+          ? 'Venta registrada en Cuenta Corriente con éxito.' 
+          : 'Venta registrada con éxito' 
+      });
       setCart([]);
+      setSelectedCustomerId('');
       fetchTodaySales();
     } catch (err) {
       setMessage({ type: 'error', text: 'Error al registrar venta: ' + err.message });
@@ -488,7 +548,7 @@ export default function PointOfSale() {
               Total: ${cartTotal.toFixed(2)}
             </div>
 
-            <div style={{ marginTop: '2rem' }}>
+            <div style={{ marginTop: '1.5rem' }}>
               <label style={{ fontWeight: 'bold', fontSize: '0.875rem' }}>Método de Pago</label>
               <select 
                 value={paymentMethod} 
@@ -500,6 +560,32 @@ export default function PointOfSale() {
                 <option value="Mercado Pago">Mercado Pago</option>
                 <option value="Débito">Débito</option>
                 <option value="Crédito">Crédito</option>
+                <option value="Cuenta Corriente">📘 Cuenta Corriente</option>
+              </select>
+            </div>
+
+            <div style={{ marginTop: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label style={{ fontWeight: 'bold', fontSize: '0.875rem' }}>
+                  Cliente {paymentMethod === 'Cuenta Corriente' && <span style={{ color: 'var(--color-danger)' }}>*</span>}
+                </label>
+                <button 
+                  type="button" 
+                  onClick={() => setShowNewCustomerModal(true)}
+                  style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600' }}
+                >
+                  + Nuevo Cliente
+                </button>
+              </div>
+              <select 
+                value={selectedCustomerId} 
+                onChange={(e) => setSelectedCustomerId(e.target.value)}
+                className={styles.paymentSelect}
+              >
+                <option value="">-- Consumidor Final / Sin Cliente --</option>
+                {customers.map(c => (
+                  <option key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ''}</option>
+                ))}
               </select>
             </div>
 
@@ -655,6 +741,42 @@ export default function PointOfSale() {
                   {updatingPayment ? 'Guardando...' : 'Guardar Cambios'}
                 </Button>
                 <Button type="button" variant="secondary" onClick={() => setEditingSale(null)} disabled={updatingPayment}>
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+      {showNewCustomerModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+          display: 'flex', justifyContent: 'center', alignItems: 'center'
+        }}>
+          <Card title="Agregar Nuevo Cliente" style={{ minWidth: '400px' }}>
+            <form onSubmit={handleCreateCustomer}>
+              <Input 
+                label="Nombre y Apellido del Cliente *" 
+                value={newCustomerForm.name}
+                onChange={e => setNewCustomerForm({...newCustomerForm, name: e.target.value})}
+                placeholder="Ej: Juan Pérez"
+                required
+                autoFocus
+              />
+              <div style={{ marginTop: '1rem' }}>
+                <Input 
+                  label="Teléfono / WhatsApp (Opcional)" 
+                  value={newCustomerForm.phone}
+                  onChange={e => setNewCustomerForm({...newCustomerForm, phone: e.target.value})}
+                  placeholder="Ej: 1123456789"
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                <Button type="submit" variant="primary" style={{ flex: 1 }} isLoading={creatingCustomer}>
+                  Guardar Cliente
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => setShowNewCustomerModal(false)}>
                   Cancelar
                 </Button>
               </div>
