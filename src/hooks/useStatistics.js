@@ -6,6 +6,81 @@ const MONTH_NAMES = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
+function getISOPeriodBounds(periodStr) {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+
+  let startIso, endIso;
+  let isCurrentMonth = false;
+  let daysPassed = 1;
+
+  if (periodStr === 'day') {
+    const y = now.getFullYear();
+    const m = pad(now.getMonth() + 1);
+    const d = pad(now.getDate());
+    startIso = `${y}-${m}-${d}T00:00:00.000Z`;
+    endIso = `${y}-${m}-${d}T23:59:59.999Z`;
+    daysPassed = 1;
+  } else if (periodStr === 'week') {
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), diff);
+    const endOfWeek = new Date(now.getFullYear(), now.getMonth(), diff + 6);
+    
+    const sy = startOfWeek.getFullYear();
+    const sm = pad(startOfWeek.getMonth() + 1);
+    const sd = pad(startOfWeek.getDate());
+
+    const ey = endOfWeek.getFullYear();
+    const em = pad(endOfWeek.getMonth() + 1);
+    const ed = pad(endOfWeek.getDate());
+
+    startIso = `${sy}-${sm}-${sd}T00:00:00.000Z`;
+    endIso = `${ey}-${em}-${ed}T23:59:59.999Z`;
+    daysPassed = Math.min(now.getDay() || 7, 7);
+  } else if (periodStr === 'month' || periodStr === 'this_month') {
+    isCurrentMonth = true;
+    const y = now.getFullYear();
+    const m = pad(now.getMonth() + 1);
+    const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+    
+    startIso = `${y}-${m}-01T00:00:00.000Z`;
+    endIso = `${y}-${m}-${pad(lastDay)}T23:59:59.999Z`;
+    daysPassed = Math.max(1, now.getDate());
+  } else if (periodStr.includes('-')) {
+    const [y, mNum] = periodStr.split('-').map(Number);
+    const m = pad(mNum);
+    const lastDay = new Date(y, mNum, 0).getDate();
+    
+    startIso = `${y}-${m}-01T00:00:00.000Z`;
+    endIso = `${y}-${m}-${pad(lastDay)}T23:59:59.999Z`;
+
+    const currentY = now.getFullYear();
+    const currentM = now.getMonth() + 1;
+    if (y === currentY && mNum === currentM) {
+      isCurrentMonth = true;
+      daysPassed = Math.max(1, now.getDate());
+    } else {
+      daysPassed = lastDay;
+    }
+  } else {
+    isCurrentMonth = true;
+    const y = now.getFullYear();
+    const m = pad(now.getMonth() + 1);
+    const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+    
+    startIso = `${y}-${m}-01T00:00:00.000Z`;
+    endIso = `${y}-${m}-${pad(lastDay)}T23:59:59.999Z`;
+    daysPassed = Math.max(1, now.getDate());
+  }
+
+  if (startIso < '2026-07-01T00:00:00.000Z') {
+    startIso = '2026-07-01T00:00:00.000Z';
+  }
+
+  return { startIso, endIso, isCurrentMonth, daysPassed };
+}
+
 export function useStatistics(period = 'month') {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,74 +95,32 @@ export function useStatistics(period = 'month') {
       setLoading(true);
       setError(null);
 
-      const now = new Date();
-      let startLocal;
-      let endLocal;
-      let isCurrentMonth = false;
-      let totalDaysInMonth = 30;
+      const { startIso, endIso, isCurrentMonth, daysPassed } = getISOPeriodBounds(period);
 
-      if (period === 'day') {
-        startLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-        endLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-      } else if (period === 'week') {
-        const day = now.getDay();
-        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-        startLocal = new Date(now.getFullYear(), now.getMonth(), diff, 0, 0, 0, 0);
-        endLocal = new Date(now.getFullYear(), now.getMonth(), diff + 6, 23, 59, 59, 999);
-      } else if (period === 'month') {
-        isCurrentMonth = true;
-        startLocal = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-        endLocal = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-        totalDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      } else if (period.includes('-')) {
-        const [y, m] = period.split('-').map(Number);
-        const currentY = now.getFullYear();
-        const currentM = now.getMonth() + 1;
-        isCurrentMonth = (y === currentY && m === currentM);
-        startLocal = new Date(y, m - 1, 1, 0, 0, 0, 0);
-        endLocal = new Date(y, m, 0, 23, 59, 59, 999);
-        totalDaysInMonth = new Date(y, m, 0).getDate();
-      } else {
-        isCurrentMonth = true;
-        startLocal = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-        endLocal = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-        totalDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      }
-
-      let isoStart = startLocal.toISOString();
-      let isoEnd = endLocal.toISOString();
-
-      if (isoStart < '2026-07-01T00:00:00.000Z') {
-        isoStart = '2026-07-01T00:00:00.000Z';
-      }
-
-      // 1. Fetch Sales Items from view (paid sales only)
-      const { data: saleItems, error: salesErr } = await supabase
+      // 1. Fetch Sales Items from view
+      const { data: saleItemsData, error: salesErr } = await supabase
         .from('vw_sales_details')
         .select('*')
-        .gte('sale_date', isoStart)
-        .lte('sale_date', isoEnd)
-        .eq('status', 'paid');
+        .gte('sale_date', startIso)
+        .lte('sale_date', endIso);
         
       if (salesErr) throw salesErr;
 
-      // 2. Fetch Unique Sales with payment_method
-      const { data: uniqueSales, error: uniqErr } = await supabase
+      // 2. Fetch Unique Sales
+      const { data: uniqueSalesData, error: uniqErr } = await supabase
         .from('sales')
-        .select('id, total_amount, payment_method, date')
-        .gte('date', isoStart)
-        .lte('date', isoEnd)
-        .eq('status', 'paid');
+        .select('id, total_amount, payment_method, date, status')
+        .gte('date', startIso)
+        .lte('date', endIso);
 
       if (uniqErr) throw uniqErr;
 
       // 3. Fetch Expenses
-      const { data: expenses, error: expErr } = await supabase
+      const { data: expensesData, error: expErr } = await supabase
         .from('expenses')
         .select('amount, paid_from_register, status, category_id, date, expense_categories(name)')
-        .gte('date', isoStart)
-        .lte('date', isoEnd)
-        .eq('status', 'paid');
+        .gte('date', startIso)
+        .lte('date', endIso);
 
       if (expErr) throw expErr;
 
@@ -99,28 +132,44 @@ export function useStatistics(period = 'month') {
 
       if (lotsErr) throw lotsErr;
 
-      // 5. Fetch Financial Movements for Cash/Transfer net calculation in period
-      const { data: finMovs, error: finErr } = await supabase
+      // 5. Fetch Financial Movements for Cash/Transfer net calculation
+      const { data: finMovsData, error: finErr } = await supabase
         .from('financial_movements')
         .select('*')
-        .gte('date', isoStart)
-        .lte('date', isoEnd)
-        .eq('status', 'paid');
+        .gte('date', startIso)
+        .lte('date', endIso);
 
       if (finErr) throw finErr;
+
+      // --- FILTERING (IN-MEMORY SAFE) ---
+      const validSales = (uniqueSalesData || []).filter(s => 
+        s.status !== 'pending' && s.status !== 'cancelled'
+      );
+
+      const validSaleItems = (saleItemsData || []).filter(item => 
+        item.status !== 'pending' && item.status !== 'cancelled'
+      );
+
+      const validExpenses = (expensesData || []).filter(e => 
+        e.status === 'paid' || !e.status
+      );
+
+      const validFinMovs = (finMovsData || []).filter(m => 
+        m.status !== 'pending'
+      );
 
       // --- CALCULATIONS ---
 
       // A. Sales & Revenue
-      const totalRevenue = saleItems.reduce((acc, item) => acc + (parseFloat(item.total_revenue) || 0), 0);
-      const totalNetProfit = saleItems.reduce((acc, item) => acc + (parseFloat(item.net_profit) || 0), 0);
-      const salesCount = uniqueSales.length;
+      const totalRevenue = validSales.reduce((acc, s) => acc + (parseFloat(s.total_amount) || 0), 0);
+      const totalNetProfit = validSaleItems.reduce((acc, item) => acc + (parseFloat(item.net_profit) || 0), 0);
+      const salesCount = validSales.length;
       const averageTicket = salesCount > 0 ? (totalRevenue / salesCount) : 0;
       const profitMarginPercentage = totalRevenue > 0 ? (totalNetProfit / totalRevenue) : 0;
 
       // B. Payment Method Breakdown & Net Funds
       const salesByPaymentMethod = {};
-      uniqueSales.forEach(s => {
+      validSales.forEach(s => {
         const method = s.payment_method || 'Otros';
         const amt = parseFloat(s.total_amount) || 0;
         salesByPaymentMethod[method] = (salesByPaymentMethod[method] || 0) + amt;
@@ -131,7 +180,7 @@ export function useStatistics(period = 'month') {
 
       let expensesCash = 0;
       let expensesTransfer = 0;
-      expenses.forEach(e => {
+      validExpenses.forEach(e => {
         const amt = parseFloat(e.amount) || 0;
         if (e.paid_from_register) {
           expensesCash += amt;
@@ -145,7 +194,7 @@ export function useStatistics(period = 'month') {
       let investmentsCash = 0;
       let investmentsTransfer = 0;
 
-      (finMovs || []).forEach(m => {
+      validFinMovs.forEach(m => {
         const amt = parseFloat(m.amount) || 0;
         if (m.type === 'withdrawal') {
           if (m.payment_method === 'Efectivo') withdrawalsCash += amt;
@@ -160,9 +209,9 @@ export function useStatistics(period = 'month') {
       const netTransferBalance = salesTransfer - expensesTransfer + withdrawalsTransfer + investmentsTransfer;
 
       // C. Expenses Breakdown
-      const totalExpenses = expenses.reduce((acc, exp) => acc + (parseFloat(exp.amount) || 0), 0);
+      const totalExpenses = validExpenses.reduce((acc, exp) => acc + (parseFloat(exp.amount) || 0), 0);
       const expensesByCategory = {};
-      expenses.forEach(exp => {
+      validExpenses.forEach(exp => {
         const catName = exp.expense_categories?.name || 'General';
         const amt = parseFloat(exp.amount) || 0;
         expensesByCategory[catName] = (expensesByCategory[catName] || 0) + amt;
@@ -178,7 +227,7 @@ export function useStatistics(period = 'month') {
       let totalInventorySaleValue = 0;
       const partnerInvestments = {};
 
-      lots.forEach(lot => {
+      (lots || []).forEach(lot => {
         const partnerName = lot.partners?.name || 'Desconocido';
         const qty = lot.quantity || 0;
         const cost = parseFloat(lot.cost_price || 0);
@@ -195,7 +244,7 @@ export function useStatistics(period = 'month') {
 
       // E. Product Performance
       const productPerformance = {};
-      saleItems.forEach(item => {
+      validSaleItems.forEach(item => {
         if (!productPerformance[item.product_name]) {
           productPerformance[item.product_name] = { quantity: 0, profit: 0 };
         }
@@ -214,26 +263,16 @@ export function useStatistics(period = 'month') {
         .slice(0, 10);
 
       // F. Projections
-      let daysPassed = 1;
-      if (period === 'day') {
-        daysPassed = 1;
-      } else if (period === 'week') {
-        daysPassed = Math.min(now.getDay() || 7, 7);
-      } else if (isCurrentMonth) {
-        daysPassed = Math.max(1, now.getDate());
-      } else {
-        daysPassed = totalDaysInMonth;
-      }
-
       const averageDailySales = totalRevenue / Math.max(1, daysPassed);
       const projectedSales = isCurrentMonth ? averageDailySales * 24 : totalRevenue;
       const projectedMargin = projectedSales * profitMarginPercentage;
 
       // Period Label
+      const nowObj = new Date();
       let periodLabel = 'Este Mes';
       if (period === 'day') periodLabel = 'Hoy';
       else if (period === 'week') periodLabel = 'Esta Semana';
-      else if (period === 'month') periodLabel = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+      else if (period === 'month') periodLabel = `${MONTH_NAMES[nowObj.getMonth()]} ${nowObj.getFullYear()}`;
       else if (period.includes('-')) {
         const [y, m] = period.split('-').map(Number);
         periodLabel = `${MONTH_NAMES[m - 1]} ${y}`;
