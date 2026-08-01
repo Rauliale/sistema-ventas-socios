@@ -141,6 +141,15 @@ export function useStatistics(period = 'month') {
 
       if (finErr) throw finErr;
 
+      // 6. Fetch Technical Services Income for the month
+      const periodMonth = startIso.substring(0, 7); // YYYY-MM
+      const { data: techServicesData, error: techErr } = await supabase
+        .from('technical_services_incomes')
+        .select('amount, partners(name)')
+        .eq('period_month', periodMonth);
+
+      if (techErr) throw techErr;
+
       // --- FILTERING (IN-MEMORY SAFE) ---
       const validSales = (uniqueSalesData || []).filter(s => 
         s.status !== 'pending' && s.status !== 'cancelled'
@@ -267,6 +276,15 @@ export function useStatistics(period = 'month') {
       const projectedSales = isCurrentMonth ? averageDailySales * 24 : totalRevenue;
       const projectedMargin = projectedSales * profitMarginPercentage;
 
+      // G. Technical Services Income
+      const technicalServices = { total: 0, byPartner: {} };
+      (techServicesData || []).forEach(ts => {
+        const partnerName = ts.partners?.name || 'Desconocido';
+        const amt = parseFloat(ts.amount || 0);
+        technicalServices.total += amt;
+        technicalServices.byPartner[partnerName] = (technicalServices.byPartner[partnerName] || 0) + amt;
+      });
+
       // Period Label
       const nowObj = new Date();
       let periodLabel = 'Este Mes';
@@ -302,7 +320,8 @@ export function useStatistics(period = 'month') {
         partnerInvestments,
         averageDailySales,
         projectedSales,
-        projectedMargin
+        projectedMargin,
+        technicalServices
       });
 
     } catch (err) {

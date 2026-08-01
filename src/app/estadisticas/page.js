@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStatistics } from '../../hooks/useStatistics';
 import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { supabase } from '../../lib/supabase';
 import styles from './page.module.css';
 
 const MONTH_NAMES = [
@@ -12,7 +15,42 @@ const MONTH_NAMES = [
 
 export default function StatisticsPage() {
   const [period, setPeriod] = useState('month');
-  const { stats, loading, error } = useStatistics(period);
+  const { stats, loading, error, refresh } = useStatistics(period);
+
+  const [showTechModal, setShowTechModal] = useState(false);
+  const [techForm, setTechForm] = useState({ partner_id: '', amount: '' });
+  const [partners, setPartners] = useState([]);
+  const [savingTech, setSavingTech] = useState(false);
+
+  useEffect(() => {
+    supabase.from('partners').select('*').then(({ data }) => setPartners(data || []));
+  }, []);
+
+  const handleTechSubmit = async (e) => {
+    e.preventDefault();
+    setSavingTech(true);
+    try {
+      let periodMonth = '';
+      if (period.includes('-')) periodMonth = period;
+      else {
+        const d = new Date();
+        periodMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      }
+      const { error } = await supabase.from('technical_services_incomes').insert({
+        partner_id: techForm.partner_id,
+        amount: techForm.amount,
+        period_month: periodMonth
+      });
+      if (error) throw error;
+      setShowTechModal(false);
+      setTechForm({ partner_id: '', amount: '' });
+      refresh();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setSavingTech(false);
+    }
+  };
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val || 0);
@@ -48,7 +86,10 @@ export default function StatisticsPage() {
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1>Estadísticas y BI</h1>
-        <div>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <Button variant="secondary" onClick={() => setShowTechModal(true)}>
+            + Servicio Técnico
+          </Button>
           <select 
             value={period} 
             onChange={(e) => setPeriod(e.target.value)}
@@ -116,7 +157,72 @@ export default function StatisticsPage() {
                 Punto de Equilibrio: {formatCurrency(stats.breakEvenPoint)}
               </div>
             </div>
+
+            <div className={styles.statCard} style={{ borderLeft: '4px solid #f59e0b' }}>
+              <div className={styles.statTitle}>Servicios Técnicos ({displayPeriodLabel})</div>
+              <div className={`${styles.statValue} ${styles.warning}`}>
+                {formatCurrency(stats.technicalServices?.total || 0)}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
+                Ingresos extra (Mano de obra 100%)
+              </div>
+            </div>
           </div>
+
+          {/* SECCIÓN 1.5: SERVICIOS TÉCNICOS */}
+          {(stats.technicalServices?.total > 0) && (
+            <>
+              <h2 className={styles.sectionTitle}>🛠️ Ingresos por Servicios Técnicos ({displayPeriodLabel})</h2>
+              <div style={{ marginBottom: '2.5rem' }}>
+                <Card title="Proporción por Socio">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                    {(() => {
+                      const byPartner = stats.technicalServices.byPartner;
+                      const total = stats.technicalServices.total;
+                      
+                      const raulAmt = byPartner['Raúl'] || 0;
+                      const nahuelAmt = byPartner['Nahuel'] || 0;
+                      const otherAmt = total - raulAmt - nahuelAmt;
+                      
+                      const raulPct = total > 0 ? (raulAmt / total) * 100 : 0;
+                      const nahuelPct = total > 0 ? (nahuelAmt / total) * 100 : 0;
+                      const otherPct = total > 0 ? (otherAmt / total) * 100 : 0;
+                      
+                      const conicStr = `var(--color-primary) 0% ${raulPct}%, var(--color-success) ${raulPct}% ${raulPct + nahuelPct}%, #f59e0b ${raulPct + nahuelPct}% 100%`;
+
+                      return (
+                        <>
+                          <div style={{
+                            width: '200px', height: '200px',
+                            borderRadius: '50%',
+                            background: `conic-gradient(${conicStr})`,
+                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+                          }} />
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <div style={{ width: '16px', height: '16px', backgroundColor: 'var(--color-primary)', borderRadius: '4px' }}></div>
+                              <span style={{ fontSize: '1.1rem' }}>Raúl: <strong>{formatCurrency(raulAmt)}</strong> ({raulPct.toFixed(1)}%)</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <div style={{ width: '16px', height: '16px', backgroundColor: 'var(--color-success)', borderRadius: '4px' }}></div>
+                              <span style={{ fontSize: '1.1rem' }}>Nahuel: <strong>{formatCurrency(nahuelAmt)}</strong> ({nahuelPct.toFixed(1)}%)</span>
+                            </div>
+                            {otherAmt > 0 && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div style={{ width: '16px', height: '16px', backgroundColor: '#f59e0b', borderRadius: '4px' }}></div>
+                                <span style={{ fontSize: '1.1rem' }}>Otros: <strong>{formatCurrency(otherAmt)}</strong> ({otherPct.toFixed(1)}%)</span>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </Card>
+              </div>
+            </>
+          )}
 
           {/* DESGLOSE POR MEDIO DE PAGO */}
           <div style={{ marginBottom: '2.5rem' }}>
@@ -354,6 +460,51 @@ export default function StatisticsPage() {
             </div>
           </div>
         </>
+      )}
+
+      {showTechModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+          display: 'flex', justifyContent: 'center', alignItems: 'center'
+        }}>
+          <Card title={`Registrar Servicio Técnico (${period.includes('-') ? period : 'Mes Actual'})`} style={{ minWidth: '400px' }}>
+            <form onSubmit={handleTechSubmit}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ fontWeight: 'bold', fontSize: '0.875rem' }}>Socio</label>
+                <select 
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--color-border)', marginTop: '0.5rem' }}
+                  value={techForm.partner_id}
+                  onChange={e => setTechForm({...techForm, partner_id: e.target.value})}
+                  required
+                >
+                  <option value="">Seleccione el socio...</option>
+                  {partners.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+              <Input 
+                label="Monto del Servicio ($) *" 
+                type="number"
+                step="0.01"
+                min="0"
+                value={techForm.amount}
+                onChange={e => setTechForm({...techForm, amount: e.target.value})}
+                placeholder="0.00"
+                required
+              />
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                <Button type="submit" variant="primary" style={{ flex: 1 }} disabled={savingTech}>
+                  {savingTech ? 'Guardando...' : 'Guardar Ingreso'}
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => setShowTechModal(false)} disabled={savingTech}>
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
       )}
     </div>
   );
