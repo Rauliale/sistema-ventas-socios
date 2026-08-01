@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { useSalesReports } from '../../hooks/useSalesReports';
 import { useSales } from '../../hooks/useSales';
 import { Edit2, XCircle } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import styles from './Reportes.module.css';
 
 export default function ReportesVentas() {
@@ -49,6 +50,20 @@ export default function ReportesVentas() {
       totalItems: acc.totalItems + Number(row.sold_quantity)
     }), { totalRevenue: 0, totalProfit: 0, totalItems: 0 });
   }, [salesDetails]);
+
+  // Agregar datos para gráficos por socio
+  const partnerStats = useMemo(() => {
+    const stats = {};
+    salesDetails.forEach(row => {
+      const pName = row.partner_name || 'Desconocido';
+      if (!stats[pName]) stats[pName] = { name: pName, revenue: 0, profit: 0 };
+      stats[pName].revenue += Number(row.total_revenue) || 0;
+      stats[pName].profit += Number(row.net_profit) || 0;
+    });
+    return Object.values(stats);
+  }, [salesDetails]);
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
   // Filter sales based on partnerFilter
   const filteredSales = useMemo(() => {
@@ -209,11 +224,13 @@ export default function ReportesVentas() {
         <div className={styles.filterGroup}>
           <label>Periodo:</label>
           <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
-            <option value="today">Hoy</option>
-            <option value="week">Esta Semana</option>
-            <option value="month">Este Mes</option>
-            <option value="custom">Día Específico</option>
             <option value="all">Histórico Completo</option>
+            <option value="today">Hoy</option>
+            <option value="week">Esta semana</option>
+            <option value="month">Este mes</option>
+            <option value="2026-08">Agosto 2026</option>
+            <option value="2026-07">Julio 2026</option>
+            <option value="custom">Fecha Específica</option>
           </select>
         </div>
 
@@ -236,6 +253,7 @@ export default function ReportesVentas() {
             <option value="all">Todos los Socios</option>
             <option value="Raúl">Raúl</option>
             <option value="Nahuel">Nahuel</option>
+            <option value="Negro Añais">Negro Añais</option>
           </select>
         </div>
       </div>
@@ -257,6 +275,68 @@ export default function ReportesVentas() {
           <h2 style={{ color: 'var(--color-secondary)', fontSize: '2rem' }}>
             {totalItems} un.
           </h2>
+        </Card>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+        <Card title="Distribución de Ventas por Socio" className={styles.summaryCard}>
+          <div style={{ height: 300, width: '100%' }}>
+            {partnerStats.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={partnerStats}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="revenue"
+                    nameKey="name"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {partnerStats.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => `$${Number(value).toLocaleString('es-AR', {minimumFractionDigits: 2})}`} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p style={{ textAlign: 'center', marginTop: '4rem', color: 'var(--color-text-secondary)' }}>No hay datos para mostrar</p>
+            )}
+          </div>
+        </Card>
+        
+        <Card title="Distribución de Ganancia por Socio" className={styles.summaryCard}>
+          <div style={{ height: 300, width: '100%' }}>
+            {partnerStats.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={partnerStats}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#82ca9d"
+                    dataKey="profit"
+                    nameKey="name"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {partnerStats.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => `$${Number(value).toLocaleString('es-AR', {minimumFractionDigits: 2})}`} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p style={{ textAlign: 'center', marginTop: '4rem', color: 'var(--color-text-secondary)' }}>No hay datos para mostrar</p>
+            )}
+          </div>
         </Card>
       </div>
 

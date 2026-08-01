@@ -38,6 +38,20 @@ export function useSalesReports() {
 
         query = query.gte('sale_date', startIso).lte('sale_date', endIso);
         salesQuery = salesQuery.gte('date', startIso).lte('date', endIso);
+      } else if (dateFilter.match(/^\d{4}-\d{2}$/)) {
+        // Specific month filter (YYYY-MM)
+        const [year, month] = dateFilter.split('-');
+        const startDate = new Date(year, parseInt(month) - 1, 1);
+        const endDate = new Date(year, parseInt(month), 0, 23, 59, 59, 999);
+        let startIso = startDate.toISOString();
+        let endIso = endDate.toISOString();
+
+        if (startIso < '2026-07-01T00:00:00.000Z') {
+          startIso = '2026-07-01T00:00:00.000Z';
+        }
+
+        query = query.gte('sale_date', startIso).lte('sale_date', endIso);
+        salesQuery = salesQuery.gte('date', startIso).lte('date', endIso);
       } else if (dateFilter !== 'all') {
         const now = new Date();
         let startDate = new Date();
