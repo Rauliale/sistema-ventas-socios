@@ -87,7 +87,7 @@ export default function Finanzas() {
       let salesTransfer = 0;
       (sales || []).forEach(s => {
         const amt = parseFloat(s.total_amount) || 0;
-        if (s.payment_method === 'Efectivo') {
+        if (s.payment_method === 'Efectivo' || s.payment_method === 'Caja Comun') {
           salesCash += amt;
         } else {
           salesTransfer += amt;
@@ -115,14 +115,14 @@ export default function Finanzas() {
       (finMovements || []).forEach(m => {
         const amt = parseFloat(m.amount) || 0;
         if (m.type === 'withdrawal') {
-          if (m.payment_method === 'Efectivo') {
+          if (m.payment_method === 'Efectivo' || m.payment_method === 'Caja Comun') {
             withdrawalsCash += amt; // Los retiros son negativos
           } else {
             withdrawalsTransfer += amt;
           }
         } else if (m.type === 'investment' && !m.related_id) {
           // Aportes de capital directos (sin related_id de compras)
-          if (m.payment_method === 'Efectivo') {
+          if (m.payment_method === 'Efectivo' || m.payment_method === 'Caja Comun') {
             investmentsCash += amt;
           } else {
             investmentsTransfer += amt;

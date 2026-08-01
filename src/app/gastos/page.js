@@ -29,7 +29,7 @@ export default function Gastos() {
     e.preventDefault();
     if (!expFormData.category_id) return alert("Debes seleccionar una categoría");
     try {
-      const isCash = (expFormData.payment_method || 'Efectivo') === 'Efectivo';
+      const isCash = (expFormData.payment_method === 'Efectivo' || expFormData.payment_method === 'Caja Comun' || !expFormData.payment_method);
       await addExpense({
         description: expFormData.description,
         category_id: expFormData.category_id,
@@ -252,17 +252,18 @@ export default function Gastos() {
                   <div>
                     <Input label="Importe ($) *" type="number" step="0.01" value={expFormData.amount} onChange={e => setExpFormData({...expFormData, amount: e.target.value})} required />
                   </div>
-                  <div>
-                    <label style={{ fontSize: '0.875rem', fontWeight: '500', display: 'block', marginBottom: '4px' }}>Forma de Pago</label>
-                    <select 
-                      value={expFormData.payment_method || 'Efectivo'}
-                      onChange={e => setExpFormData({...expFormData, payment_method: e.target.value})}
-                      style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--color-border)' }}
-                    >
-                      <option value="Efectivo">💵 Efectivo (Caja Diaria)</option>
-                      <option value="Transferencia">🏦 Transferencia / Banco</option>
-                    </select>
-                  </div>
+                  <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', marginBottom: '0.25rem', color: 'var(--color-text-secondary)' }}>Forma de Pago</label>
+                  <select
+                    value={expFormData.payment_method}
+                    onChange={(e) => setExpFormData({ ...expFormData, payment_method: e.target.value })}
+                    style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--color-border)' }}
+                  >
+                    <option value="Efectivo">💵 Efectivo (Caja Diaria)</option>
+                    <option value="Caja Comun">💰 Efectivo (Caja Común)</option>
+                    <option value="Transferencia">🏦 Transferencia</option>
+                  </select>
+                </div>
                   <div>
                     <label style={{ fontSize: '0.875rem', fontWeight: '500', display: 'block', marginBottom: '4px' }}>Reparto (Raúl/Nahuel)</label>
                     <select 

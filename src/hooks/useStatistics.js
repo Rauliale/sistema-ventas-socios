@@ -193,7 +193,7 @@ export function useStatistics(period = 'month') {
         salesByPaymentMethod[method] = (salesByPaymentMethod[method] || 0) + amt;
       });
 
-      let salesCash = salesByPaymentMethod['Efectivo'] || 0;
+      let salesCash = (salesByPaymentMethod['Efectivo'] || 0) + (salesByPaymentMethod['Caja Comun'] || 0);
       let salesTransfer = totalRevenue - salesCash;
 
       let expensesCash = 0;
@@ -215,10 +215,10 @@ export function useStatistics(period = 'month') {
       validFinMovs.forEach(m => {
         const amt = parseFloat(m.amount) || 0;
         if (m.type === 'withdrawal') {
-          if (m.payment_method === 'Efectivo') withdrawalsCash += amt;
+          if (m.payment_method === 'Efectivo' || m.payment_method === 'Caja Comun') withdrawalsCash += amt;
           else withdrawalsTransfer += amt;
         } else if (m.type === 'investment' && !m.related_id) {
-          if (m.payment_method === 'Efectivo') investmentsCash += amt;
+          if (m.payment_method === 'Efectivo' || m.payment_method === 'Caja Comun') investmentsCash += amt;
           else investmentsTransfer += amt;
         }
       });
