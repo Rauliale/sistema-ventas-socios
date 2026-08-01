@@ -868,6 +868,8 @@ export default function PointOfSale() {
               </div>
             </form>
           </Card>
+        </div>
+      )}
       {activeTicketSale && (
         <TicketA4Modal 
           sale={activeTicketSale} 
