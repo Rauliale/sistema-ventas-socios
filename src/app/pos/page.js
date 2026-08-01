@@ -704,6 +704,7 @@ export default function PointOfSale() {
                                 : sale.payment_method === 'Efectivo' ? styles.badgeCash : styles.badgeDigital
                             }`}>
                               {isCancelled ? 'Cancelada' : sale.payment_method}
+                            </span>
                             <button 
                               onClick={() => openTicketForSale(sale)}
                               style={{
