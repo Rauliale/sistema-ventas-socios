@@ -159,6 +159,18 @@ export function useStatistics(period = 'month') {
 
       if (purchErr) throw purchErr;
 
+      // 8. Fetch ALL-TIME data to compute the actual global cash and transfer balances (ignoring before July 2026)
+      const globalStartIso = '2026-07-01T00:00:00.000Z';
+      const [
+        { data: allSalesRaw },
+        { data: allExpensesRaw },
+        { data: allFinMovsRaw }
+      ] = await Promise.all([
+        supabase.from('sales').select('total_amount, payment_method, status').gte('date', globalStartIso),
+        supabase.from('expenses').select('amount, paid_from_register, status').gte('date', globalStartIso),
+        supabase.from('financial_movements').select('amount, type, payment_method, status').gte('date', globalStartIso)
+      ]);
+
       // --- FILTERING (IN-MEMORY SAFE) ---
       const validSales = (uniqueSalesData || []).filter(s => 
         s.status !== 'pending' && s.status !== 'cancelled'
@@ -223,8 +235,43 @@ export function useStatistics(period = 'month') {
         }
       });
 
-      const netCashBalance = salesCash - expensesCash + withdrawalsCash + investmentsCash;
-      const netTransferBalance = salesTransfer - expensesTransfer + withdrawalsTransfer + investmentsTransfer;
+      const allSales = (allSalesRaw || []).filter(s => s.status !== 'pending' && s.status !== 'cancelled');
+      const allExpenses = (allExpensesRaw || []).filter(e => e.status === 'paid' || !e.status);
+      const allFinMovs = (allFinMovsRaw || []).filter(m => m.status !== 'pending');
+
+      let globalSalesCash = 0;
+      let globalSalesTransfer = 0;
+      allSales.forEach(s => {
+        const amt = parseFloat(s.total_amount) || 0;
+        if (s.payment_method === 'Efectivo' || s.payment_method === 'Caja Comun') globalSalesCash += amt;
+        else globalSalesTransfer += amt;
+      });
+
+      let globalExpensesCash = 0;
+      let globalExpensesTransfer = 0;
+      allExpenses.forEach(e => {
+        const amt = parseFloat(e.amount) || 0;
+        if (e.paid_from_register) globalExpensesCash += amt;
+        else globalExpensesTransfer += amt;
+      });
+
+      let globalWithdrawalsCash = 0;
+      let globalWithdrawalsTransfer = 0;
+      let globalInvestmentsCash = 0;
+      let globalInvestmentsTransfer = 0;
+      allFinMovs.forEach(m => {
+        const amt = parseFloat(m.amount) || 0;
+        if (m.type === 'withdrawal') {
+          if (m.payment_method === 'Efectivo' || m.payment_method === 'Caja Comun') globalWithdrawalsCash += amt;
+          else globalWithdrawalsTransfer += amt;
+        } else if (m.type === 'investment' && !m.related_id) {
+          if (m.payment_method === 'Efectivo' || m.payment_method === 'Caja Comun') globalInvestmentsCash += amt;
+          else globalInvestmentsTransfer += amt;
+        }
+      });
+
+      const netCashBalance = globalSalesCash - globalExpensesCash + globalWithdrawalsCash + globalInvestmentsCash;
+      const netTransferBalance = globalSalesTransfer - globalExpensesTransfer + globalWithdrawalsTransfer + globalInvestmentsTransfer;
 
       // C. Expenses Breakdown
       const totalExpenses = validExpenses.reduce((acc, exp) => acc + (parseFloat(exp.amount) || 0), 0);
