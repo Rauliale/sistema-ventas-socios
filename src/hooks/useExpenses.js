@@ -43,8 +43,12 @@ export function useExpenses() {
 
   const addExpense = async (payload) => {
     try {
-      // payload: { category_id, description, amount, shared_type, paid_from_register }
-      const data = await db.insert('expenses', payload);
+      // payload: { category_id, description, amount, shared_type, paid_from_register, status }
+      const expensePayload = {
+        ...payload,
+        status: payload.status || (payload.paid_from_register ? 'paid' : 'pending')
+      };
+      const data = await db.insert('expenses', expensePayload);
       
       const partners = await db.get('partners');
       const raul = partners.find(p => p.name === 'Raúl');

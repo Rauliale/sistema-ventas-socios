@@ -236,7 +236,8 @@ export default function PointOfSale() {
                   category_id: expenseForm.category_id,
                   amount: parseFloat(expenseForm.amount),
                   shared_type: expenseForm.shared_type,
-                  paid_from_register: true
+                  paid_from_register: true,
+                  status: 'paid'
                 });
                 setShowExpenseModal(false);
                 setExpenseForm({ description: '', category_id: expenseForm.category_id, amount: '', shared_type: '50/50' });
