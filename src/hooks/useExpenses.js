@@ -43,9 +43,10 @@ export function useExpenses() {
 
   const addExpense = async (payload) => {
     try {
-      // payload: { category_id, description, amount, shared_type, paid_from_register, status }
+      // payload: { category_id, description, amount, shared_type, paid_from_register, status, payment_method }
+      const { payment_method, ...restPayload } = payload;
       const expensePayload = {
-        ...payload,
+        ...restPayload,
         status: payload.status || (payload.paid_from_register ? 'paid' : 'pending')
       };
       const data = await db.insert('expenses', expensePayload);
