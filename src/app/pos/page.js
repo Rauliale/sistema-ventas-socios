@@ -10,7 +10,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useCashRegister } from '../../hooks/useCashRegister';
 import { useExpenses } from '../../hooks/useExpenses';
 import { supabase } from '../../lib/supabase';
-import { Edit2 } from 'lucide-react';
+import { Edit2, Printer } from 'lucide-react';
+import { TicketA4Modal } from '../../components/TicketA4Modal';
 import styles from './page.module.css';
 
 export default function PointOfSale() {
@@ -47,6 +48,9 @@ export default function PointOfSale() {
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
   const [newCustomerForm, setNewCustomerForm] = useState({ name: '', phone: '' });
   const [creatingCustomer, setCreatingCustomer] = useState(false);
+
+  // State for A4 Ticket Printable Modal
+  const [activeTicketSale, setActiveTicketSale] = useState(null);
 
   // States for editing sale payment method
   const [editingSale, setEditingSale] = useState(null);
@@ -191,6 +195,33 @@ export default function PointOfSale() {
 
   const cartTotal = cart.reduce((acc, item) => acc + item.total_price, 0);
 
+  const openTicketForSale = async (sale) => {
+    try {
+      const { data: saleData } = await supabase
+        .from('sales')
+        .select('*, profiles(name), customers(name, phone)')
+        .eq('id', sale.id)
+        .single();
+
+      const { data: itemsData } = await supabase
+        .from('sale_items')
+        .select('*, products(name)')
+        .eq('sale_id', sale.id);
+
+      if (saleData) {
+        setActiveTicketSale({
+          ...saleData,
+          items: (itemsData || []).map(i => ({
+            ...i,
+            name: i.products?.name || 'Producto'
+          }))
+        });
+      }
+    } catch (err) {
+      console.error('Error al abrir comprobante A4:', err);
+    }
+  };
+
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     if (paymentMethod === 'Cuenta Corriente' && !selectedCustomerId) {
@@ -199,12 +230,29 @@ export default function PointOfSale() {
     }
 
     try {
-      await processSale(user?.id, selectedCustomerId || null, paymentMethod, cart.map(i => ({
+      const currentCartItems = [...cart];
+      const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+
+      const saleId = await processSale(user?.id, selectedCustomerId || null, paymentMethod, cart.map(i => ({
         product_id: i.product_id,
         quantity: i.quantity,
         unit_price: i.unit_price
       })));
-      
+
+      const { data: saleData } = await supabase
+        .from('sales')
+        .select('*, profiles(name)')
+        .eq('id', saleId)
+        .single();
+
+      if (saleData) {
+        setActiveTicketSale({
+          ...saleData,
+          customers: selectedCustomer,
+          items: currentCartItems
+        });
+      }
+
       setMessage({ 
         type: 'success', 
         text: paymentMethod === 'Cuenta Corriente' 
@@ -634,7 +682,22 @@ export default function PointOfSale() {
                                 : sale.payment_method === 'Efectivo' ? styles.badgeCash : styles.badgeDigital
                             }`}>
                               {isCancelled ? 'Cancelada' : sale.payment_method}
-                            </span>
+                            <button 
+                              onClick={() => openTicketForSale(sale)}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'var(--color-primary)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '2px',
+                                borderRadius: '4px',
+                              }}
+                              title="Imprimir Comprobante A4"
+                            >
+                              <Printer size={14} />
+                            </button>
                             {!isCancelled && (
                               <button 
                                 onClick={() => {
@@ -782,7 +845,11 @@ export default function PointOfSale() {
               </div>
             </form>
           </Card>
-        </div>
+      {activeTicketSale && (
+        <TicketA4Modal 
+          sale={activeTicketSale} 
+          onClose={() => setActiveTicketSale(null)} 
+        />
       )}
     </div>
   );
