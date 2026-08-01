@@ -79,7 +79,7 @@ export function useExpenses() {
       }
 
       if (financialMovements.length > 0) {
-        const payMethod = payload.paid_from_register ? 'Efectivo' : 'Transferencia';
+        const payMethod = payload.payment_method || (payload.paid_from_register ? 'Efectivo' : 'Transferencia');
         const movementsWithPaymentMethod = financialMovements.map(m => ({
           ...m,
           payment_method: payMethod

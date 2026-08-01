@@ -38,7 +38,7 @@ export default function PointOfSale() {
   const [addCashSubmitting, setAddCashSubmitting] = useState(false);
 
   const [showExpenseModal, setShowExpenseModal] = useState(false);
-  const [expenseForm, setExpenseForm] = useState({ description: '', category_id: '', amount: '', shared_type: '50/50' });
+  const [expenseForm, setExpenseForm] = useState({ description: '', category_id: '', amount: '', shared_type: '50/50', payment_method: 'Efectivo' });
   const [expenseSubmitting, setExpenseSubmitting] = useState(false);
   const [todaySales, setTodaySales] = useState([]);
 
@@ -396,22 +396,29 @@ export default function PointOfSale() {
           backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
           display: 'flex', justifyContent: 'center', alignItems: 'center'
         }}>
-          <Card title="Gasto de Caja Diaria" style={{ minWidth: '400px' }}>
+          <Card title="Registrar Gasto" style={{ minWidth: '400px' }}>
             <form onSubmit={async (e) => {
               e.preventDefault();
               try {
                 setExpenseSubmitting(true);
+                const isCash = (expenseForm.payment_method || 'Efectivo') === 'Efectivo';
                 await addExpense({
                   description: expenseForm.description,
                   category_id: expenseForm.category_id,
                   amount: parseFloat(expenseForm.amount),
                   shared_type: expenseForm.shared_type,
-                  paid_from_register: true,
+                  payment_method: expenseForm.payment_method || 'Efectivo',
+                  paid_from_register: isCash,
                   status: 'paid'
                 });
                 setShowExpenseModal(false);
-                setExpenseForm({ description: '', category_id: expenseForm.category_id, amount: '', shared_type: '50/50' });
-                setMessage({ type: 'success', text: 'Gasto registrado y descontado de la caja' });
+                setExpenseForm({ description: '', category_id: expenseForm.category_id, amount: '', shared_type: '50/50', payment_method: 'Efectivo' });
+                setMessage({ 
+                  type: 'success', 
+                  text: isCash 
+                    ? 'Gasto en efectivo registrado y descontado de la caja' 
+                    : 'Gasto por transferencia registrado correctamente' 
+                });
               } catch (err) {
                 setMessage({ type: 'error', text: 'Error al registrar gasto: ' + err.message });
               } finally {
@@ -439,14 +446,29 @@ export default function PointOfSale() {
                   ))}
                 </select>
               </div>
-              <Input 
-                label="Monto Retirado de Caja ($)" 
-                type="number" 
-                step="0.01" 
-                value={expenseForm.amount}
-                onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})}
-                required
-              />
+
+              <div style={{ marginTop: '1rem' }}>
+                <label style={{ fontWeight: 'bold', fontSize: '0.875rem' }}>Forma de Pago del Gasto</label>
+                <select 
+                  className={styles.paymentSelect}
+                  value={expenseForm.payment_method || 'Efectivo'}
+                  onChange={e => setExpenseForm({...expenseForm, payment_method: e.target.value})}
+                >
+                  <option value="Efectivo">💵 Efectivo (Retirado de Caja Diaria)</option>
+                  <option value="Transferencia">🏦 Transferencia / Banco (No afecta la caja)</option>
+                </select>
+              </div>
+
+              <div style={{ marginTop: '1rem' }}>
+                <Input 
+                  label={expenseForm.payment_method === 'Transferencia' ? "Monto de Gasto por Transferencia ($)" : "Monto Retirado de Caja ($)"}
+                  type="number" 
+                  step="0.01" 
+                  value={expenseForm.amount}
+                  onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})}
+                  required
+                />
+              </div>
               <div style={{ marginTop: '1rem' }}>
                 <label style={{ fontWeight: 'bold', fontSize: '0.875rem' }}>Distribución (Quién lo paga)</label>
                 <select 
