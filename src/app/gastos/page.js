@@ -186,15 +186,21 @@ export default function Gastos() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1>{activeTab === 'gastos' ? 'Control de Gastos' : 'Agenda de Préstamos'}</h1>
+        <h1>{activeTab === 'gastos' ? 'Control de Gastos' : activeTab === 'prestamos' ? 'Agenda de Préstamos' : 'Gastos Personales'}</h1>
         
-        {activeTab === 'gastos' ? (
+        {activeTab === 'gastos' && (
           <Button onClick={() => setShowExpForm(!showExpForm)}>
             {showExpForm ? 'Cancelar' : 'Registrar Gasto'}
           </Button>
-        ) : (
+        )}
+        {activeTab === 'prestamos' && (
           <Button onClick={() => setShowLoanForm(!showLoanForm)}>
             {showLoanForm ? 'Cancelar' : 'Cargar Préstamo'}
+          </Button>
+        )}
+        {activeTab === 'personales' && (
+          <Button onClick={() => setShowPersonalForm(!showPersonalForm)}>
+            {showPersonalForm ? 'Cancelar' : 'Registrar Gasto Personal'}
           </Button>
         )}
       </div>
