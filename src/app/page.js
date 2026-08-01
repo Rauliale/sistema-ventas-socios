@@ -41,6 +41,7 @@ export default function Dashboard() {
           .from('financial_movements')
           .select('type, amount')
           .eq('partner_id', partner.id)
+          .eq('status', 'paid')
           .gte('date', '2026-07-01T00:00:00.000Z');
 
         const totals = (data || []).reduce((acc, mov) => {
@@ -69,6 +70,7 @@ export default function Dashboard() {
       const { data: recentMovs } = await supabase
         .from('financial_movements')
         .select('*, partners(name)')
+        .eq('status', 'paid')
         .gte('date', '2026-07-01T00:00:00.000Z')
         .order('date', { ascending: false })
         .limit(15);

@@ -18,7 +18,7 @@ export function useSales() {
       });
 
       // Automatic 4% tax deduction for non-cash payments
-      if (paymentMethod !== 'Efectivo') {
+      if (paymentMethod !== 'Efectivo' && paymentMethod !== 'Cuenta Corriente') {
         const totalAmount = items.reduce((acc, item) => acc + (parseFloat(item.quantity) * parseFloat(item.unit_price)), 0);
         const taxAmount = totalAmount * 0.04;
 
@@ -121,11 +121,11 @@ export function useSales() {
       const desc = `Retención Impuesto (4%) - Venta #${sale.sale_number}`;
 
       // 3. Handle side-effects: Tax deduction (4% Provincial Tax)
-      const oldIsCash = oldPaymentMethod === 'Efectivo';
-      const newIsCash = newPaymentMethod === 'Efectivo';
+      const oldUntaxed = oldPaymentMethod === 'Efectivo' || oldPaymentMethod === 'Cuenta Corriente';
+      const newUntaxed = newPaymentMethod === 'Efectivo' || newPaymentMethod === 'Cuenta Corriente';
 
-      if (oldIsCash && !newIsCash) {
-        // Transition from Cash to Digital -> Create tax expense and splits
+      if (oldUntaxed && !newUntaxed) {
+        // Transition from Untaxed to Taxed -> Create tax expense and splits
         const totalAmount = parseFloat(sale.total_amount);
         const taxAmount = totalAmount * 0.04;
 
@@ -184,8 +184,8 @@ export function useSales() {
             if (finErr) throw finErr;
           }
         }
-      } else if (!oldIsCash && newIsCash) {
-        // Transition from Digital to Cash -> Delete tax expense and splits
+      } else if (!oldUntaxed && newUntaxed) {
+        // Transition from Taxed to Untaxed -> Delete tax expense and splits
         const { data: existingExp } = await supabase
           .from('expenses')
           .select('id')

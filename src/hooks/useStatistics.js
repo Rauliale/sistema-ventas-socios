@@ -42,7 +42,8 @@ export function useStatistics(period = 'month') {
       const { data: saleItems, error: salesErr } = await supabase
         .from('vw_sales_details')
         .select('*')
-        .gte('sale_date', isoStart);
+        .gte('sale_date', isoStart)
+        .eq('status', 'paid');
         
       if (salesErr) throw salesErr;
 
@@ -50,7 +51,8 @@ export function useStatistics(period = 'month') {
       const { data: uniqueSales, error: uniqErr } = await supabase
         .from('sales')
         .select('id, total_amount')
-        .gte('date', isoStart);
+        .gte('date', isoStart)
+        .eq('status', 'paid');
 
       if (uniqErr) throw uniqErr;
 

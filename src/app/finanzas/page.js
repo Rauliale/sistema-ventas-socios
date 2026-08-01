@@ -75,6 +75,7 @@ export default function Finanzas() {
       const { data: finMovements, error: finErr } = await supabase
         .from('financial_movements')
         .select('*')
+        .eq('status', 'paid')
         .gte('date', '2026-07-01T00:00:00.000Z')
         .order('date', { ascending: false });
       if (finErr) throw finErr;

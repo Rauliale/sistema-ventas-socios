@@ -48,6 +48,7 @@ function AppContent({ children }) {
           <Link href="/">📊 Dashboard</Link>
           <Link href="/pos">🛒 Punto de Venta</Link>
           <Link href="/consulta-precios">🔍 Consulta de Precios</Link>
+          <Link href="/cuentas-corrientes">📘 Cuentas Corrientes</Link>
           <Link href="/compras">📦 Compras</Link>
           <Link href="/productos">📋 Productos</Link>
           <Link href="/gastos">💸 Gastos</Link>
