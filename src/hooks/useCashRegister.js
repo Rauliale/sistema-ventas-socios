@@ -180,12 +180,41 @@ export function useCashRegister() {
     };
   };
 
+  const addCashToRegister = async (additionalAmount) => {
+    try {
+      setLoading(true);
+      if (!activeRegister) throw new Error("No hay caja abierta");
+      const additional = parseFloat(additionalAmount);
+      if (isNaN(additional) || additional <= 0) throw new Error("Monto de cambio inválido");
+
+      const currentInitial = parseFloat(activeRegister.initial_cash) || 0;
+      const newInitial = currentInitial + additional;
+
+      const { data, error: err } = await supabase
+        .from('cash_registers')
+        .update({ initial_cash: newInitial })
+        .eq('id', activeRegister.id)
+        .select()
+        .single();
+
+      if (err) throw err;
+      setActiveRegister(data);
+      return data;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     activeRegister,
     loading,
     error,
     openRegister,
     closeRegister,
+    addCashToRegister,
     getClosurePreview,
     refresh: checkActiveRegister
   };

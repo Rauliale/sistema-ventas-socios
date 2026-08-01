@@ -18,7 +18,7 @@ export default function PointOfSale() {
   const { processSale, updateSalePaymentMethod, loading: saleLoading } = useSales();
   const { user } = useAuth();
   
-  const { activeRegister, loading: registerLoading, openRegister, closeRegister, getClosurePreview } = useCashRegister();
+  const { activeRegister, loading: registerLoading, openRegister, closeRegister, addCashToRegister, getClosurePreview } = useCashRegister();
   const { categories, addExpense } = useExpenses();
 
   const [barcode, setBarcode] = useState('');
@@ -31,6 +31,10 @@ export default function PointOfSale() {
   const [initialCash, setInitialCash] = useState('');
   const [actualCash, setActualCash] = useState('');
   const [closurePreview, setClosurePreview] = useState(null);
+
+  const [showAddCashModal, setShowAddCashModal] = useState(false);
+  const [addCashAmount, setAddCashAmount] = useState('');
+  const [addCashSubmitting, setAddCashSubmitting] = useState(false);
 
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [expenseForm, setExpenseForm] = useState({ description: '', category_id: '', amount: '', shared_type: '50/50' });
@@ -207,6 +211,9 @@ export default function PointOfSale() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1>Punto de Venta</h1>
         <div style={{ display: 'flex', gap: '1rem' }}>
+          <Button variant="secondary" onClick={() => setShowAddCashModal(true)}>
+            + Agregar Cambio
+          </Button>
           <Button variant="secondary" onClick={() => setShowExpenseModal(true)}>
             Registrar Gasto
           </Button>
@@ -219,6 +226,61 @@ export default function PointOfSale() {
           </Button>
         </div>
       </div>
+
+      {showAddCashModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+          display: 'flex', justifyContent: 'center', alignItems: 'center'
+        }}>
+          <Card title="Agregar Cambio a la Caja" style={{ minWidth: '400px' }}>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                setAddCashSubmitting(true);
+                const updated = await addCashToRegister(addCashAmount);
+                setShowAddCashModal(false);
+                setAddCashAmount('');
+                setMessage({ 
+                  type: 'success', 
+                  text: `Cambio agregado correctamente. Cambio inicial acumulado: $${parseFloat(updated.initial_cash).toLocaleString('es-AR', { minimumFractionDigits: 2 })}` 
+                });
+              } catch (err) {
+                setMessage({ type: 'error', text: 'Error al agregar cambio: ' + err.message });
+              } finally {
+                setAddCashSubmitting(false);
+              }
+            }}>
+              <div style={{ marginBottom: '1rem', padding: '0.75rem', backgroundColor: 'var(--color-background)', borderRadius: 'var(--radius-sm)' }}>
+                <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>Cambio Inicial Actual: </span>
+                <strong style={{ fontSize: '1.1rem', color: 'var(--color-primary)' }}>
+                  ${parseFloat(activeRegister?.initial_cash || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </strong>
+              </div>
+
+              <Input 
+                label="Monto Adicional de Cambio ($)" 
+                type="number" 
+                step="0.01" 
+                value={addCashAmount}
+                onChange={e => setAddCashAmount(e.target.value)}
+                placeholder="Ej: 10000"
+                required
+                autoFocus
+              />
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                <Button type="submit" variant="primary" style={{ flex: 1 }} disabled={addCashSubmitting}>
+                  Confirmar Cambio
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => setShowAddCashModal(false)}>
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
 
       {showExpenseModal && (
         <div style={{
