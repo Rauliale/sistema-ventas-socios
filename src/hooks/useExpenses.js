@@ -161,9 +161,9 @@ export function useExpenses() {
         
       // 5. Re-insert new financial movements
       const partners = await db.get('partners');
-      const raul = partners.find(p => p.name === 'Raúl');
-      const nahuel = partners.find(p => p.name === 'Nahuel');
-      const negro = partners.find(p => p.name === 'Negro Añais');
+      const raul = partners.find(p => p.name.includes('Raúl'));
+      const nahuel = partners.find(p => p.name.includes('Nahuel'));
+      const negro = partners.find(p => p.name.includes('Negro'));
       
       let financialMovements = [];
       const amt = parseFloat(newAmount);
@@ -222,9 +222,9 @@ export function useExpenses() {
       const newOriginalAmount = expData.is_edited ? expData.original_amount : expData.amount;
       
       const partners = await db.get('partners');
-      const raul = partners.find(p => p.name === 'Raúl');
-      const nahuel = partners.find(p => p.name === 'Nahuel');
-      const negro = partners.find(p => p.name === 'Negro Añais');
+      const raul = partners.find(p => p.name.includes('Raúl'));
+      const nahuel = partners.find(p => p.name.includes('Nahuel'));
+      const negro = partners.find(p => p.name.includes('Negro'));
 
       const generateMovements = async (relatedId, amount, sharedType, paymentMethod) => {
         let financialMovements = [];

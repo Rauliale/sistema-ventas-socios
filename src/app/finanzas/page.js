@@ -120,11 +120,11 @@ export default function Finanzas() {
           } else {
             withdrawalsTransfer += amt;
           }
-        } else if (m.type === 'investment' && !m.related_id) {
-          // Aportes de capital directos (sin related_id de compras)
+        } else if (m.type === 'investment') {
+          // Aportes de capital directos o pagos de compras con caja común
           if (m.payment_method === 'Efectivo' || m.payment_method === 'Caja Comun') {
             investmentsCash += amt;
-          } else {
+          } else if (m.payment_method === 'Transferencia') {
             investmentsTransfer += amt;
           }
         }

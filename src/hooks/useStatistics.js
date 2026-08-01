@@ -229,9 +229,9 @@ export function useStatistics(period = 'month') {
         if (m.type === 'withdrawal') {
           if (m.payment_method === 'Efectivo' || m.payment_method === 'Caja Comun') withdrawalsCash += amt;
           else withdrawalsTransfer += amt;
-        } else if (m.type === 'investment' && !m.related_id) {
+        } else if (m.type === 'investment') {
           if (m.payment_method === 'Efectivo' || m.payment_method === 'Caja Comun') investmentsCash += amt;
-          else investmentsTransfer += amt;
+          else if (m.payment_method === 'Transferencia') investmentsTransfer += amt;
         }
       });
 
@@ -264,9 +264,9 @@ export function useStatistics(period = 'month') {
         if (m.type === 'withdrawal') {
           if (m.payment_method === 'Efectivo' || m.payment_method === 'Caja Comun') globalWithdrawalsCash += amt;
           else globalWithdrawalsTransfer += amt;
-        } else if (m.type === 'investment' && !m.related_id) {
+        } else if (m.type === 'investment') {
           if (m.payment_method === 'Efectivo' || m.payment_method === 'Caja Comun') globalInvestmentsCash += amt;
-          else globalInvestmentsTransfer += amt;
+          else if (m.payment_method === 'Transferencia') globalInvestmentsTransfer += amt;
         }
       });
 

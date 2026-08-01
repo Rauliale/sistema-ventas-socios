@@ -5,7 +5,7 @@ export function usePurchases() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const processPurchase = async ({ partnerId, supplierId, invoiceNumber, observations, items, supplierUrl }) => {
+  const processPurchase = async ({ partnerId, supplierId, invoiceNumber, observations, items, supplierUrl, payments }) => {
     try {
       setLoading(true);
       setError(null);
@@ -15,7 +15,8 @@ export function usePurchases() {
         p_invoice_number: invoiceNumber || null,
         p_observations: observations || null,
         p_supplier_url: supplierUrl || null,
-        p_items: items // [{product_id, quantity, unit_price}]
+        p_items: items, // [{product_id, quantity, unit_price}]
+        p_payments: payments // [{amount, payment_method}]
       });
       return purchaseId;
     } catch (err) {

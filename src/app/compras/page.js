@@ -39,6 +39,11 @@ export default function Compras() {
     { product_id: '', quantity: 1, unit_price: 0 }
   ]);
 
+  // Medios de pago (lista dinámica)
+  const [payments, setPayments] = useState([
+    { amount: '', payment_method: 'Efectivo' }
+  ]);
+
   useEffect(() => {
     db.get('partners').then(data => setPartners(data || []));
     loadPurchases();
@@ -63,18 +68,25 @@ export default function Compras() {
   };
 
   const updateItem = (index, field, value) => {
-    setItems(prev => prev.map((item, i) => {
-      if (i !== index) return item;
-      // Auto-completar precio de costo cuando se selecciona un producto
-      if (field === 'product_id' && value) {
-        const prod = products.find(p => p.id === value);
-        return { ...item, product_id: value, unit_price: prod ? prod.cost_price : 0, quantity: 1 };
-      }
-      return { ...item, [field]: value };
-    }));
+    const newItems = [...items];
+    newItems[index] = { ...newItems[index], [field]: value };
+    // Auto-completar precio de costo cuando se selecciona un producto
+    if (field === 'product_id' && value) {
+      const prod = products.find(p => p.id === value);
+      newItems[index].unit_price = prod ? prod.cost_price : 0;
+    }
+    setItems(newItems);
   };
 
-  const handleBarcodeSubmit = (e) => {
+  const addPayment = () => setPayments([...payments, { amount: '', payment_method: 'Efectivo' }]);
+  const removePayment = (idx) => setPayments(payments.filter((_, i) => i !== idx));
+  const updatePayment = (idx, field, value) => {
+    const newPayments = [...payments];
+    newPayments[idx] = { ...newPayments[idx], [field]: value };
+    setPayments(newPayments);
+  };
+
+  const handleBarcodeSubmit = async (e) => {
     e.preventDefault();
     if (!barcodeInput.trim()) return;
     
@@ -142,6 +154,14 @@ export default function Compras() {
       return;
     }
 
+    const totalCompra = items.reduce((acc, i) => acc + (parseFloat(i.unit_price) * parseInt(i.quantity || 0)), 0);
+    const totalPayments = payments.reduce((acc, p) => acc + (parseFloat(p.amount) || 0), 0);
+    
+    if (Math.abs(totalPayments - totalCompra) > 0.01) {
+      setMessage({ type: 'error', text: `El total de los pagos ($${totalPayments.toFixed(2)}) no coincide con el total a invertir ($${totalCompra.toFixed(2)}).` });
+      return;
+    }
+
     try {
       await processPurchase({
         partnerId: header.partner_id,
@@ -153,12 +173,17 @@ export default function Compras() {
           product_id: i.product_id,
           quantity: parseInt(i.quantity),
           unit_price: parseFloat(i.unit_price)
+        })),
+        payments: payments.map(p => ({
+          amount: parseFloat(p.amount),
+          payment_method: p.payment_method
         }))
       });
       setMessage({ type: 'success', text: 'Compra registrada con éxito. Stock actualizado.' });
       setShowForm(false);
       setHeader({ partner_id: '', invoice_number: '', observations: '', supplier_url: '' });
       setItems([{ product_id: '', quantity: 1, unit_price: 0 }]);
+      setPayments([{ amount: '', payment_method: 'Efectivo' }]);
       await loadPurchases();
     } catch (err) {
       setMessage({ type: 'error', text: 'Error al registrar compra: ' + err.message });
@@ -306,6 +331,49 @@ export default function Compras() {
 
               <div className={styles.totalRow}>
                 <strong>Total a invertir: ${totalCompra.toFixed(2)}</strong>
+              </div>
+            </div>
+
+            {/* Medios de Pago */}
+            <div style={{ marginTop: '2rem', padding: '1.5rem', backgroundColor: 'var(--color-background-secondary)', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3 style={{ margin: 0 }}>Medios de Pago</h3>
+                <Button type="button" variant="secondary" onClick={addPayment} style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}>+ Añadir forma de pago</Button>
+              </div>
+              
+              {payments.map((pay, idx) => (
+                <div key={idx} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <label className={styles.label}>Monto ($) *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className={styles.input}
+                      value={pay.amount}
+                      onChange={e => updatePayment(idx, 'amount', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label className={styles.label}>Método de Pago *</label>
+                    <select
+                      className={styles.select}
+                      value={pay.payment_method}
+                      onChange={e => updatePayment(idx, 'payment_method', e.target.value)}
+                      required
+                    >
+                      <option value="Efectivo">💵 Efectivo (Caja del Negocio)</option>
+                      <option value="Transferencia">🏦 Transferencia (Banco del Negocio)</option>
+                      <option value="Propio">💼 Dinero Propio (Bolsillo del Inversor)</option>
+                    </select>
+                  </div>
+                  {payments.length > 1 && (
+                    <button type="button" className={styles.removeBtn} onClick={() => removePayment(idx)} style={{ height: '42px', marginBottom: '4px' }}>×</button>
+                  )}
+                </div>
+              ))}
+              <div style={{ textAlign: 'right', marginTop: '1rem', fontWeight: '600', color: Math.abs(payments.reduce((acc, p) => acc + (parseFloat(p.amount) || 0), 0) - totalCompra) > 0.01 ? 'var(--color-danger)' : 'var(--color-success)' }}>
+                Total Asignado: ${payments.reduce((acc, p) => acc + (parseFloat(p.amount) || 0), 0).toFixed(2)}
               </div>
             </div>
 
