@@ -62,7 +62,7 @@ export default function PointOfSale() {
     try {
       const { data, error } = await supabase
         .from('sales')
-        .select('id, sale_number, total_amount, payment_method, date, status')
+        .select('id, sale_number, total_amount, payment_method, date, status, sale_items(quantity, products(name))')
         .gte('date', activeRegister.opened_at)
         .order('date', { ascending: false });
       if (error) throw error;
@@ -684,6 +684,7 @@ export default function PointOfSale() {
                 <thead>
                   <tr>
                     <th style={{ paddingLeft: '0' }}>Nº Venta</th>
+                    <th>Detalle</th>
                     <th>Hora</th>
                     <th>Forma de Pago</th>
                     <th style={{ textAlign: 'right', paddingRight: '0' }}>Total</th>
@@ -695,6 +696,13 @@ export default function PointOfSale() {
                     return (
                       <tr key={sale.id} style={isCancelled ? { opacity: 0.6 } : {}}>
                         <td style={{ paddingLeft: '0', fontWeight: '500', textDecoration: isCancelled ? 'line-through' : 'none' }}>#{sale.sale_number}</td>
+                        <td style={{ textDecoration: isCancelled ? 'line-through' : 'none' }}>
+                          {sale.sale_items?.map((item, idx) => (
+                            <div key={idx} style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: '1.2', marginBottom: '2px' }}>
+                              {item.quantity}x {item.products?.name || 'Producto'}
+                            </div>
+                          ))}
+                        </td>
                         <td style={{ textDecoration: isCancelled ? 'line-through' : 'none' }}>{new Date(sale.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
