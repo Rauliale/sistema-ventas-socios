@@ -75,7 +75,7 @@ export default function PointOfSale() {
   const fetchCustomers = async () => {
     try {
       const { data, error } = await supabase
-        .from('customers')
+        .from('clientes')
         .select('*')
         .order('name', { ascending: true });
       if (error) throw error;
@@ -91,7 +91,7 @@ export default function PointOfSale() {
     try {
       setCreatingCustomer(true);
       const { data, error } = await supabase
-        .from('customers')
+        .from('clientes')
         .insert({
           name: newCustomerForm.name.trim(),
           phone: newCustomerForm.phone.trim() || null
@@ -199,7 +199,7 @@ export default function PointOfSale() {
     try {
       const { data: saleData } = await supabase
         .from('sales')
-        .select('*, profiles(name), customers(name, phone)')
+        .select('*, profiles(name), clientes(name, phone)')
         .eq('id', sale.id)
         .single();
 
@@ -248,7 +248,7 @@ export default function PointOfSale() {
       if (saleData) {
         setActiveTicketSale({
           ...saleData,
-          customers: selectedCustomer,
+          clientes: selectedCustomer,
           items: currentCartItems
         });
       }

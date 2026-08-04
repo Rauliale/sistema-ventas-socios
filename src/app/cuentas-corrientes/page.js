@@ -39,7 +39,7 @@ export default function CuentasCorrientes() {
           total_amount,
           paid_amount,
           customer_id,
-          customers ( name, phone )
+          clientes ( name, phone )
         `)
         .eq('status', 'pending');
 
@@ -51,13 +51,13 @@ export default function CuentasCorrientes() {
 
       pendingSales.forEach(sale => {
         const custId = sale.customer_id;
-        const custName = sale.customers?.name || 'Cliente Desconocido';
+        const custName = sale.clientes?.name || 'Cliente Desconocido';
         
         if (!grouped[custId]) {
           grouped[custId] = {
             customer_id: custId,
             customer_name: custName,
-            customer_phone: sale.customers?.phone || '-',
+            customer_phone: sale.clientes?.phone || '-',
             total_debt: 0,
             sales: []
           };

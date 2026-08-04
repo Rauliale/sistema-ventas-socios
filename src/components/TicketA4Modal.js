@@ -17,7 +17,7 @@ export function TicketA4Modal({ sale, onClose }) {
   };
 
   const isPending = sale.status === 'pending';
-  const customerName = sale.customers?.name || sale.customer_name || 'Consumidor Final';
+  const customerName = sale.clientes?.name || sale.customer_name || 'Consumidor Final';
   const sellerName = sale.profiles?.name || sale.seller_name || 'InfoNeg';
 
   const rawItems = sale.items || sale.sale_items || [];
@@ -67,7 +67,7 @@ export function TicketA4Modal({ sale, onClose }) {
             <div className={styles.clientBox}>
               <span className={styles.boxTitle}>DATOS DEL CLIENTE</span>
               <div className={styles.clientName}>{customerName}</div>
-              {sale.customers?.phone && <div style={{ fontSize: '13px', marginTop: '4px', color: '#475569' }}>Tel: {sale.customers.phone}</div>}
+              {sale.clientes?.phone && <div style={{ fontSize: '13px', marginTop: '4px', color: '#475569' }}>Tel: {sale.clientes.phone}</div>}
             </div>
 
             <div className={styles.paymentBox}>

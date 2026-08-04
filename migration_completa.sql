@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS partners (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS customers (
+CREATE TABLE IF NOT EXISTS clientes (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name         TEXT NOT NULL,
   phone        TEXT,
@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS purchase_items (
 CREATE TABLE IF NOT EXISTS sales (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   seller_id      UUID NOT NULL REFERENCES profiles(id),
-  customer_id    UUID REFERENCES customers(id),
+  customer_id    UUID REFERENCES clientes(id),
   date           TIMESTAMPTZ NOT NULL DEFAULT now(),
   total_amount   NUMERIC NOT NULL DEFAULT 0,
   payment_method TEXT NOT NULL,
@@ -374,7 +374,7 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 -- Política: acceso total para usuarios autenticados
 CREATE POLICY "auth_all" ON profiles FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "auth_all" ON partners FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "auth_all" ON customers FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "auth_all" ON clientes FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "auth_all" ON suppliers FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "auth_all" ON products FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "auth_all" ON product_lots FOR ALL TO authenticated USING (true) WITH CHECK (true);
