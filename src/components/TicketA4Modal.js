@@ -16,7 +16,7 @@ export function TicketA4Modal({ sale, onClose }) {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val || 0);
   };
 
-  const isPending = sale.status === 'pending';
+  const isPending = sale.status === 'pending' || sale.payment_method === 'Cuenta Corriente';
   const customerName = sale.clientes?.name || sale.customer_name || 'Consumidor Final';
   const sellerName = sale.profiles?.name || sale.seller_name || 'InfoNeg';
 
