@@ -21,6 +21,13 @@ export default function CuentasCorrientes() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState('');
+  
+  // Details and Edit Price Modal
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [selectedSaleDetails, setSelectedSaleDetails] = useState(null);
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [editItemPrice, setEditItemPrice] = useState('');
+  const [savingPrice, setSavingPrice] = useState(false);
 
   useEffect(() => {
     fetchCuentasCorrientes();
@@ -39,7 +46,8 @@ export default function CuentasCorrientes() {
           total_amount,
           paid_amount,
           customer_id,
-          clientes ( name, phone )
+          clientes ( name, phone ),
+          sale_items ( id, product_id, quantity, unit_price, total_price, description, products(name) )
         `)
         .eq('status', 'pending');
 
@@ -121,6 +129,47 @@ export default function CuentasCorrientes() {
     }
   };
 
+  const handleOpenDetails = (sale) => {
+    setSelectedSaleDetails(sale);
+    setEditingItemId(null);
+    setDetailsModalOpen(true);
+  };
+
+  const savePrice = async (item) => {
+    try {
+      setSavingPrice(true);
+      const newPrice = parseFloat(editItemPrice);
+      if (isNaN(newPrice) || newPrice < 0) throw new Error("Precio inválido");
+      
+      const { error } = await supabase.rpc('rpc_update_sale_item_price', {
+        p_sale_item_id: item.id,
+        p_new_price: newPrice
+      });
+      if (error) throw error;
+      
+      // Update local state for the modal
+      const diff = (newPrice - item.unit_price) * item.quantity;
+      setSelectedSaleDetails(prev => ({
+        ...prev,
+        total_amount: parseFloat(prev.total_amount) + diff,
+        remaining_amount: parseFloat(prev.remaining_amount) + diff,
+        sale_items: prev.sale_items.map(i => i.id === item.id ? {
+          ...i,
+          unit_price: newPrice,
+          total_price: newPrice * i.quantity
+        } : i)
+      }));
+      
+      setEditingItemId(null);
+      // Refresh background data
+      fetchCuentasCorrientes();
+    } catch (err) {
+      alert(err.message || 'Error al actualizar el precio');
+    } finally {
+      setSavingPrice(false);
+    }
+  };
+
   return (
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -192,10 +241,15 @@ export default function CuentasCorrientes() {
                         {
                           header: 'Acciones',
                           render: row => (
-                            <Button variant="primary" size="small" onClick={() => handleOpenPayment(row)}>
-                              <CreditCard size={14} style={{ marginRight: '4px' }} />
-                              Cobrar
-                            </Button>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <Button variant="secondary" size="small" onClick={() => handleOpenDetails(row)}>
+                                Detalles
+                              </Button>
+                              <Button variant="primary" size="small" onClick={() => handleOpenPayment(row)}>
+                                <CreditCard size={14} style={{ marginRight: '4px' }} />
+                                Cobrar
+                              </Button>
+                            </div>
                           )
                         }
                       ]}
@@ -253,6 +307,80 @@ export default function CuentasCorrientes() {
               </Button>
               <Button variant="primary" onClick={submitPayment} isLoading={paymentLoading}>
                 Confirmar Pago
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Details Modal */}
+      {detailsModalOpen && selectedSaleDetails && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent} style={{ maxWidth: '600px' }}>
+            <h3>Detalle de Venta #{selectedSaleDetails.sale_number}</h3>
+            
+            <div style={{ margin: '1rem 0' }}>
+              <Table 
+                columns={[
+                  { 
+                    header: 'Producto', 
+                    render: item => item.description || item.products?.name || 'Desconocido'
+                  },
+                  { header: 'Cant.', accessor: 'quantity' },
+                  { 
+                    header: 'Precio Unit.', 
+                    render: item => editingItemId === item.id ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        $
+                        <input 
+                          type="number" 
+                          step="0.01"
+                          value={editItemPrice} 
+                          onChange={e => setEditItemPrice(e.target.value)}
+                          style={{ width: '70px', padding: '2px', border: '1px solid var(--color-border)', borderRadius: '4px' }}
+                          autoFocus
+                        />
+                      </div>
+                    ) : (
+                      `$${parseFloat(item.unit_price).toLocaleString('es-AR')}`
+                    )
+                  },
+                  { 
+                    header: 'Subtotal', 
+                    render: item => editingItemId === item.id ? (
+                       <span style={{ color: 'var(--color-text-secondary)' }}>-</span>
+                    ) : (
+                       `$${parseFloat(item.total_price).toLocaleString('es-AR')}`
+                    )
+                  },
+                  {
+                    header: '',
+                    render: item => editingItemId === item.id ? (
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <Button variant="primary" size="small" onClick={() => savePrice(item)} isLoading={savingPrice}>✓</Button>
+                        <Button variant="secondary" size="small" onClick={() => setEditingItemId(null)}>✕</Button>
+                      </div>
+                    ) : (
+                      <Button variant="secondary" size="small" onClick={() => {
+                        setEditingItemId(item.id);
+                        setEditItemPrice(item.unit_price);
+                      }}>
+                        Editar
+                      </Button>
+                    )
+                  }
+                ]}
+                data={selectedSaleDetails.sale_items || []}
+              />
+            </div>
+
+            <div style={{ textAlign: 'right', fontSize: '1.1rem', fontWeight: 'bold', marginTop: '1rem' }}>
+              Total Venta: ${parseFloat(selectedSaleDetails.total_amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+              <Button variant="secondary" onClick={() => setDetailsModalOpen(false)}>
+                Cerrar
               </Button>
             </div>
           </div>
