@@ -57,12 +57,16 @@ export default function PointOfSale() {
   const [newPaymentMethod, setNewPaymentMethod] = useState('');
   const [updatingPayment, setUpdatingPayment] = useState(false);
 
+  // States for Custom Product (Otros / Servicio)
+  const [showCustomProductModal, setShowCustomProductModal] = useState(false);
+  const [customProductForm, setCustomProductForm] = useState({ description: '', price: '' });
+
   const fetchTodaySales = async () => {
     if (!activeRegister) return;
     try {
       const { data, error } = await supabase
         .from('sales')
-        .select('id, sale_number, total_amount, payment_method, date, status, sale_items(quantity, products(name))')
+        .select('id, sale_number, total_amount, payment_method, date, status, sale_items(quantity, description, products(name))')
         .gte('date', activeRegister.opened_at)
         .order('date', { ascending: false });
       if (error) throw error;
@@ -159,29 +163,52 @@ export default function PointOfSale() {
 
   const addToCart = (product) => {
     setCart(prev => {
-      const exists = prev.find(item => item.product_id === product.id);
+      const isCustom = product.id === '00000000-0000-0000-0000-000000000000';
+      const exists = !isCustom && prev.find(item => item.product_id === product.id && !item.isCustom);
+      
       if (exists) {
         return prev.map(item => 
-          item.product_id === product.id 
+          (item.product_id === product.id && !item.isCustom)
             ? { ...item, quantity: item.quantity + 1, total_price: (item.quantity + 1) * item.unit_price }
             : item
         );
       }
+      
+      const newCartId = Date.now() + Math.random();
       return [...prev, {
+        cart_id: newCartId,
         product_id: product.id,
         name: product.name,
+        description: product.description,
         unit_price: product.sale_price,
         quantity: 1,
-        total_price: product.sale_price
+        total_price: product.sale_price,
+        isCustom: isCustom
       }];
     });
     setBarcode('');
     setSuggestions([]);
   };
 
-  const updateQuantity = (id, delta) => {
+  const handleAddCustomProduct = (e) => {
+    e.preventDefault();
+    if (!customProductForm.description || !customProductForm.price) return;
+    
+    addToCart({
+      id: '00000000-0000-0000-0000-000000000000',
+      name: customProductForm.description,
+      description: customProductForm.description,
+      sale_price: parseFloat(customProductForm.price),
+      isCustom: true
+    });
+    
+    setShowCustomProductModal(false);
+    setCustomProductForm({ description: '', price: '' });
+  };
+
+  const updateQuantity = (cart_id, delta) => {
     setCart(prev => prev.map(item => {
-      if (item.product_id === id) {
+      if (item.cart_id === cart_id) {
         const newQ = Math.max(1, item.quantity + delta);
         return { ...item, quantity: newQ, total_price: newQ * item.unit_price };
       }
@@ -189,8 +216,17 @@ export default function PointOfSale() {
     }));
   };
 
-  const removeItem = (id) => {
-    setCart(prev => prev.filter(item => item.product_id !== id));
+  const updatePrice = (cart_id, newPrice) => {
+    setCart(prev => prev.map(item => {
+      if (item.cart_id === cart_id) {
+        return { ...item, unit_price: newPrice, total_price: item.quantity * newPrice };
+      }
+      return item;
+    }));
+  };
+
+  const removeItem = (cart_id) => {
+    setCart(prev => prev.filter(item => item.cart_id !== cart_id));
   };
 
   const cartTotal = cart.reduce((acc, item) => acc + item.total_price, 0);
@@ -213,7 +249,7 @@ export default function PointOfSale() {
           ...saleData,
           items: (itemsData || []).map(i => ({
             ...i,
-            name: i.products?.name || 'Producto'
+            name: i.description || i.products?.name || 'Producto'
           }))
         });
       }
@@ -236,7 +272,8 @@ export default function PointOfSale() {
       const saleId = await processSale(user?.id, selectedCustomerId || null, paymentMethod, cart.map(i => ({
         product_id: i.product_id,
         quantity: i.quantity,
-        unit_price: i.unit_price
+        unit_price: i.unit_price,
+        description: i.description || null
       })));
 
       const { data: saleData } = await supabase
@@ -322,6 +359,9 @@ export default function PointOfSale() {
           <Button variant="secondary" onClick={() => setShowAddCashModal(true)}>
             + Agregar Cambio
           </Button>
+          <Button variant="secondary" onClick={() => setShowCustomProductModal(true)}>
+            + Agregar Otros
+          </Button>
           <Button variant="secondary" onClick={() => setShowExpenseModal(true)}>
             Registrar Gasto
           </Button>
@@ -382,6 +422,44 @@ export default function PointOfSale() {
                   Confirmar Cambio
                 </Button>
                 <Button type="button" variant="secondary" onClick={() => setShowAddCashModal(false)}>
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {showCustomProductModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+          display: 'flex', justifyContent: 'center', alignItems: 'center'
+        }}>
+          <Card title="Agregar Producto / Servicio" style={{ minWidth: '400px' }}>
+            <form onSubmit={handleAddCustomProduct}>
+              <Input 
+                label="Descripción (Ej. Servicio técnico)" 
+                value={customProductForm.description}
+                onChange={e => setCustomProductForm({...customProductForm, description: e.target.value})}
+                required
+                autoFocus
+              />
+              <div style={{ marginTop: '1rem' }}>
+                <Input 
+                  label="Precio Unitario ($)" 
+                  type="number" 
+                  step="0.01" 
+                  value={customProductForm.price}
+                  onChange={e => setCustomProductForm({...customProductForm, price: e.target.value})}
+                  required
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                <Button type="submit" variant="primary" style={{ flex: 1 }}>
+                  Agregar al Carrito
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => setShowCustomProductModal(false)}>
                   Cancelar
                 </Button>
               </div>
@@ -591,16 +669,26 @@ export default function PointOfSale() {
                 <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center' }}>El carrito está vacío</p>
               ) : (
                 cart.map(item => (
-                  <div key={item.product_id} className={styles.cartItem}>
+                  <div key={item.cart_id} className={styles.cartItem}>
                     <div className={styles.itemInfo}>
                       <strong>{item.name}</strong>
-                      <div>${item.unit_price.toFixed(2)} c/u</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '4px' }}>
+                        <span>$</span>
+                        <input 
+                          type="number"
+                          step="0.01"
+                          value={item.unit_price}
+                          onChange={(e) => updatePrice(item.cart_id, parseFloat(e.target.value) || 0)}
+                          style={{ width: '80px', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--color-border)' }}
+                        />
+                        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>c/u</span>
+                      </div>
                     </div>
                     <div className={styles.itemActions}>
-                      <Button variant="secondary" onClick={() => updateQuantity(item.product_id, -1)}>-</Button>
+                      <Button variant="secondary" onClick={() => updateQuantity(item.cart_id, -1)}>-</Button>
                       <span style={{ minWidth: '2rem', textAlign: 'center' }}>{item.quantity}</span>
-                      <Button variant="secondary" onClick={() => updateQuantity(item.product_id, 1)}>+</Button>
-                      <Button variant="danger" onClick={() => removeItem(item.product_id)}>X</Button>
+                      <Button variant="secondary" onClick={() => updateQuantity(item.cart_id, 1)}>+</Button>
+                      <Button variant="danger" onClick={() => removeItem(item.cart_id)}>X</Button>
                     </div>
                     <div style={{ marginLeft: '1rem', fontWeight: 'bold' }}>
                       ${item.total_price.toFixed(2)}
@@ -699,7 +787,7 @@ export default function PointOfSale() {
                         <td style={{ textDecoration: isCancelled ? 'line-through' : 'none' }}>
                           {sale.sale_items?.map((item, idx) => (
                             <div key={idx} style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: '1.2', marginBottom: '2px' }}>
-                              {item.quantity}x {item.products?.name || 'Producto'}
+                              {item.quantity}x {item.description || item.products?.name || 'Producto'}
                             </div>
                           ))}
                         </td>

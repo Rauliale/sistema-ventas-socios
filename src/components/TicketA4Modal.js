@@ -103,7 +103,7 @@ export function TicketA4Modal({ sale, onClose }) {
                 </tr>
               ) : (
                 rawItems.map((item, idx) => {
-                  const prodName = item.product_name || item.products?.name || item.name || 'Producto';
+                  const prodName = item.description || item.product_name || item.products?.name || item.name || 'Producto';
                   const qty = item.quantity || 1;
                   const unitPrice = parseFloat(item.unit_price || 0);
                   const totalPrice = parseFloat(item.total_price || (qty * unitPrice));
