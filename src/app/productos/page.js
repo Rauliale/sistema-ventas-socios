@@ -16,6 +16,7 @@ export default function Productos() {
   const handleEditClick = (product) => {
     setEditingProduct(product);
     setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSaveProduct = async (formData) => {
