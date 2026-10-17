@@ -1,22 +1,37 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Download } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Table } from '../../components/ui/Table';
 import { Button } from '../../components/ui/Button';
 import { useProducts } from '../../hooks/useProducts';
 import { ProductForm } from '../../components/ProductForm';
+import { exportProductsToCsv } from '../../lib/productExporter';
+import styles from './productos.module.css';
 
 export default function Productos() {
   const { products, loading, addProduct, updateProduct } = useProducts();
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  const inStockCount = products.filter(
+    product => product.active !== false && (Number(product.stock) || 0) > 0
+  ).length;
   
   const handleEditClick = (product) => {
     setEditingProduct(product);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleExportCsv = () => {
+    try {
+      exportProductsToCsv(products, { onlyInStock: true });
+    } catch (err) {
+      alert('Error al exportar productos: ' + err.message);
+    }
   };
 
   const handleSaveProduct = async (formData) => {
@@ -53,11 +68,21 @@ export default function Productos() {
 
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1>Gestión de Productos</h1>
-        <Button onClick={() => { setEditingProduct(null); setShowForm(!showForm); }}>
-          {showForm && !editingProduct ? 'Cancelar' : 'Nuevo Producto'}
-        </Button>
+      <div className={styles.headerBar}>
+        <h1 className={styles.headerTitle}>Gestión de Productos</h1>
+        <div className={styles.actionGroup}>
+          <Button
+            variant="secondary"
+            onClick={handleExportCsv}
+            disabled={loading || inStockCount === 0}
+          >
+            <Download size={16} className={styles.buttonIcon} />
+            Exportar CSV ({inStockCount} en stock)
+          </Button>
+          <Button onClick={() => { setEditingProduct(null); setShowForm(!showForm); }}>
+            {showForm && !editingProduct ? 'Cancelar' : 'Nuevo Producto'}
+          </Button>
+        </div>
       </div>
 
       {showForm && (
