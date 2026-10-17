@@ -21,3 +21,9 @@
 .buttonIcon {
   margin-right: var(--spacing-xs);
 }
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}

@@ -12,11 +12,12 @@ import { exportProductsToCsv } from '../../lib/productExporter';
 import styles from './productos.module.css';
 
 export default function Productos() {
-  const { products, loading, addProduct, updateProduct, rectifyProductStock } = useProducts();
+  const { products, loading, addProduct, updateProduct, rectifyProductStock, deleteProduct } = useProducts();
   const { partners } = usePartners();
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const inStockCount = products.filter(
     product => product.active !== false && (Number(product.stock) || 0) > 0
@@ -26,6 +27,26 @@ export default function Productos() {
     setEditingProduct(product);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteClick = async (product) => {
+    const confirmed = window.confirm(
+      `¿Estás seguro de que deseas eliminar definitivamente el producto "${product.name}"?`
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(product.id);
+      await deleteProduct(product.id);
+      if (editingProduct?.id === product.id) {
+        setShowForm(false);
+        setEditingProduct(null);
+      }
+    } catch (err) {
+      alert('Error al eliminar producto: ' + err.message);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const handleExportCsv = () => {
@@ -68,7 +89,24 @@ export default function Productos() {
     { header: 'Venta ($)', accessor: 'sale_price' },
     { header: 'Stock Actual', accessor: 'stock', render: row => `${row.stock}${row.stockBreakdown || ''}` },
     { header: 'Stock Mínimo', accessor: 'min_stock' },
-    { header: 'Acción', render: row => <Button onClick={() => handleEditClick(row)}>Editar</Button> }
+    {
+      header: 'Acción',
+      render: row => (
+        <div className={styles.rowActions}>
+          <Button onClick={() => handleEditClick(row)} disabled={deletingId === row.id}>
+            Editar
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => handleDeleteClick(row)}
+            isLoading={deletingId === row.id}
+            disabled={deletingId !== null && deletingId !== row.id}
+          >
+            Eliminar
+          </Button>
+        </div>
+      )
+    }
   ];
 
   return (

@@ -13,6 +13,7 @@ export function useProducts() {
       const { data, error: fetchErr } = await supabase
         .from('products')
         .select('*, product_lots(id, quantity, partner_id, cost_price, created_at, partners(name))')
+        .eq('active', true)
         .order('name', { ascending: true });
       
       if (fetchErr) throw new Error(fetchErr.message);
@@ -202,6 +203,60 @@ export function useProducts() {
     }
   };
 
+  const deleteProduct = async (id) => {
+    if (!id) {
+      throw new Error('ID de producto inválido.');
+    }
+
+    try {
+      const { supabase } = await import('../lib/supabase');
+
+      const { count: salesCount, error: salesCheckErr } = await supabase
+        .from('sale_items')
+        .select('id', { count: 'exact', head: true })
+        .eq('product_id', id);
+
+      if (salesCheckErr) throw new Error(salesCheckErr.message);
+
+      if (!salesCount || salesCount === 0) {
+        await supabase.from('inventory_movements').delete().eq('product_id', id);
+        await supabase.from('product_lots').delete().eq('product_id', id);
+        await supabase.from('purchase_items').delete().eq('product_id', id);
+
+        const { error: deleteErr } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', id);
+
+        if (deleteErr) {
+          const { error: softErr } = await supabase
+            .from('products')
+            .update({ active: false, barcode: null, sku: null })
+            .eq('id', id);
+
+          if (softErr) throw new Error(softErr.message);
+        }
+      } else {
+        await supabase
+          .from('product_lots')
+          .update({ quantity: 0 })
+          .eq('product_id', id);
+
+        const { error: softErr } = await supabase
+          .from('products')
+          .update({ active: false, barcode: null, sku: null })
+          .eq('id', id);
+
+        if (softErr) throw new Error(softErr.message);
+      }
+
+      setProducts(prev => prev.filter(p => p.id !== id));
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
   return {
     products,
     loading,
@@ -209,7 +264,8 @@ export function useProducts() {
     fetchProducts,
     addProduct,
     updateProduct,
-    rectifyProductStock
+    rectifyProductStock,
+    deleteProduct
   };
 }
 
