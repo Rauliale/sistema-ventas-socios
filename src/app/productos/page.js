@@ -6,12 +6,14 @@ import { Card } from '../../components/ui/Card';
 import { Table } from '../../components/ui/Table';
 import { Button } from '../../components/ui/Button';
 import { useProducts } from '../../hooks/useProducts';
+import { usePartners } from '../../hooks/usePurchases';
 import { ProductForm } from '../../components/ProductForm';
 import { exportProductsToCsv } from '../../lib/productExporter';
 import styles from './productos.module.css';
 
 export default function Productos() {
-  const { products, loading, addProduct, updateProduct } = useProducts();
+  const { products, loading, addProduct, updateProduct, rectifyProductStock } = useProducts();
+  const { partners } = usePartners();
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -34,11 +36,14 @@ export default function Productos() {
     }
   };
 
-  const handleSaveProduct = async (formData) => {
+  const handleSaveProduct = async (formData, stockRectification) => {
     try {
       setSaving(true);
       if (editingProduct) {
         await updateProduct(editingProduct.id, formData);
+        if (stockRectification) {
+          await rectifyProductStock(editingProduct.id, stockRectification);
+        }
       } else {
         await addProduct(formData);
       }
@@ -87,9 +92,10 @@ export default function Productos() {
 
       {showForm && (
         <ProductForm 
-          key={editingProduct ? editingProduct.id : 'new'}
+          key={editingProduct ? `${editingProduct.id}-${editingProduct.stock}` : 'new'}
           title={editingProduct ? "Editar Producto" : "Agregar Producto"}
           initialData={editingProduct || {}}
+          partners={partners}
           onSubmit={handleSaveProduct} 
           onCancel={handleCancel} 
           isLoading={saving} 
