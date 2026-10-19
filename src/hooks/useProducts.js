@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
 import { db } from '../lib/supabase';
+import {
+  pauseProductInPulso,
+  resolveProductSku,
+  syncProductsByIdsWithPulso
+} from '../lib/pulsoClient';
 
 export function useProducts() {
   const [products, setProducts] = useState([]);
@@ -77,6 +82,7 @@ export function useProducts() {
       if (error) throw new Error(error.message);
       
       setProducts(prev => prev.map(p => p.id === id ? { ...p, ...payload } : p));
+      syncProductsByIdsWithPulso([id]);
       return data;
     } catch (err) {
       setError(err.message);
@@ -197,6 +203,7 @@ export function useProducts() {
       }
 
       await fetchProducts();
+      syncProductsByIdsWithPulso([productId]);
     } catch (err) {
       setError(err.message);
       throw err;
@@ -209,6 +216,9 @@ export function useProducts() {
     }
 
     try {
+      const targetProduct = products.find(p => p.id === id);
+      const targetSku = targetProduct ? resolveProductSku(targetProduct) : '';
+
       const { supabase } = await import('../lib/supabase');
 
       const { count: salesCount, error: salesCheckErr } = await supabase
@@ -251,6 +261,9 @@ export function useProducts() {
       }
 
       setProducts(prev => prev.filter(p => p.id !== id));
+      if (targetSku) {
+        pauseProductInPulso(targetSku).catch(() => {});
+      }
     } catch (err) {
       setError(err.message);
       throw err;

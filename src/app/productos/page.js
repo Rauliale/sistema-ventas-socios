@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Download } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, RefreshCw } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Table } from '../../components/ui/Table';
 import { Button } from '../../components/ui/Button';
@@ -9,6 +9,7 @@ import { useProducts } from '../../hooks/useProducts';
 import { usePartners } from '../../hooks/usePurchases';
 import { ProductForm } from '../../components/ProductForm';
 import { exportProductsToCsv } from '../../lib/productExporter';
+import { fetchPulsoMerchantStatus, syncCatalogWithPulso } from '../../lib/pulsoClient';
 import styles from './productos.module.css';
 
 export default function Productos() {
@@ -18,6 +19,15 @@ export default function Productos() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [syncingPulso, setSyncingPulso] = useState(false);
+  const [pulsoMerchant, setPulsoMerchant] = useState(null);
+  const [pulsoSyncSummary, setPulsoSyncSummary] = useState(null);
+
+  useEffect(() => {
+    fetchPulsoMerchantStatus()
+      .then(data => setPulsoMerchant(data))
+      .catch(() => setPulsoMerchant(null));
+  }, []);
 
   const inStockCount = products.filter(
     product => product.active !== false && (Number(product.stock) || 0) > 0
@@ -54,6 +64,25 @@ export default function Productos() {
       exportProductsToCsv(products, { onlyInStock: true });
     } catch (err) {
       alert('Error al exportar productos: ' + err.message);
+    }
+  };
+
+  const handleSyncPulso = async () => {
+    try {
+      setSyncingPulso(true);
+      const result = await syncCatalogWithPulso(products, {
+        onlyInStock: true,
+        pauseMissing: true
+      });
+      setPulsoSyncSummary(result);
+      const refreshedStatus = await fetchPulsoMerchantStatus().catch(() => null);
+      if (refreshedStatus) {
+        setPulsoMerchant(refreshedStatus);
+      }
+    } catch (err) {
+      alert('Error al sincronizar con Pulso: ' + err.message);
+    } finally {
+      setSyncingPulso(false);
     }
   };
 
@@ -116,17 +145,42 @@ export default function Productos() {
         <div className={styles.actionGroup}>
           <Button
             variant="secondary"
+            onClick={handleSyncPulso}
+            isLoading={syncingPulso}
+            disabled={loading || inStockCount === 0}
+          >
+            <RefreshCw size={16} className={styles.buttonIcon} />
+            Sincronizar con Pulso ({inStockCount})
+          </Button>
+          <Button
+            variant="secondary"
             onClick={handleExportCsv}
             disabled={loading || inStockCount === 0}
           >
             <Download size={16} className={styles.buttonIcon} />
-            Exportar CSV ({inStockCount} en stock)
+            Exportar CSV
           </Button>
           <Button onClick={() => { setEditingProduct(null); setShowForm(!showForm); }}>
             {showForm && !editingProduct ? 'Cancelar' : 'Nuevo Producto'}
           </Button>
         </div>
       </div>
+
+      {(pulsoMerchant || pulsoSyncSummary) && (
+        <div className={styles.pulsoBanner}>
+          {pulsoMerchant && (
+            <div className={styles.pulsoStatusText}>
+              <span className={styles.statusDotConnected} />
+              <strong>Pulso conectado:</strong> {pulsoMerchant.name} ({pulsoMerchant.active_products} productos activos en tienda)
+            </div>
+          )}
+          {pulsoSyncSummary && (
+            <div className={styles.pulsoSyncResult}>
+              Última sincronización — Nuevos: {pulsoSyncSummary.created} · Actualizados: {pulsoSyncSummary.updated} · Sin cambios: {pulsoSyncSummary.unchanged} · Pausados: {pulsoSyncSummary.paused}
+            </div>
+          )}
+        </div>
+      )}
 
       {showForm && (
         <ProductForm 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { db } from '../lib/supabase';
+import { syncProductsByIdsWithPulso } from '../lib/pulsoClient';
 
 export function useSales() {
   const [loading, setLoading] = useState(false);
@@ -16,6 +17,9 @@ export function useSales() {
         p_payment_method: paymentMethod,
         p_items: items // [{product_id, quantity, unit_price}]
       });
+
+      const soldProductIds = (items || []).map(item => item.product_id);
+      syncProductsByIdsWithPulso(soldProductIds);
 
       // Automatic 4% tax deduction for non-cash payments
       if (paymentMethod !== 'Efectivo' && paymentMethod !== 'Cuenta Corriente') {

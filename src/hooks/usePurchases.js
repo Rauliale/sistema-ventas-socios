@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { db, supabase } from '../lib/supabase';
+import { syncProductsByIdsWithPulso } from '../lib/pulsoClient';
 
 export function usePurchases() {
   const [loading, setLoading] = useState(false);
@@ -18,6 +19,8 @@ export function usePurchases() {
         p_items: items, // [{product_id, quantity, unit_price}]
         p_payments: payments // [{amount, payment_method}]
       });
+      const purchasedProductIds = (items || []).map(item => item.product_id);
+      syncProductsByIdsWithPulso(purchasedProductIds);
       return purchaseId;
     } catch (err) {
       setError(err.message);
