@@ -10,6 +10,21 @@ function getPulsoHeaders() {
   };
 }
 
+function serializePulsoError(data, fallback) {
+  const detail = data?.detail || data?.message || data?.error;
+  if (!detail) return fallback;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map(err => {
+        const loc = Array.isArray(err?.loc) ? err.loc.slice(1).join('.') : '';
+        return loc ? `${loc}: ${err.msg}` : err?.msg || JSON.stringify(err);
+      })
+      .join(' | ');
+  }
+  return JSON.stringify(detail);
+}
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -36,7 +51,7 @@ export async function GET(request) {
     const data = await response.json();
     if (!response.ok) {
       return Response.json(
-        { error: data?.detail || data?.message || 'Error al consultar Pulso.' },
+        { error: serializePulsoError(data, 'Error al consultar Pulso.') },
         { status: response.status }
       );
     }
@@ -65,7 +80,6 @@ export async function PUT(request) {
       errors: []
     };
 
-    // If fits in a single batch (<= 500), send directly with pause_missing
     if (products.length <= MAX_BATCH_SIZE) {
       const response = await fetch(`${PULSO_BASE_URL}/products`, {
         method: 'PUT',
@@ -79,7 +93,7 @@ export async function PUT(request) {
       const data = await response.json();
       if (!response.ok) {
         return Response.json(
-          { error: data?.detail || data?.message || 'Error al publicar en Pulso.' },
+          { error: serializePulsoError(data, 'Error al publicar en Pulso.') },
           { status: response.status }
         );
       }
@@ -93,7 +107,6 @@ export async function PUT(request) {
       });
     }
 
-    // Multi-batch handling for > 500 items
     for (let i = 0; i < products.length; i += MAX_BATCH_SIZE) {
       const batch = products.slice(i, i + MAX_BATCH_SIZE);
       const response = await fetch(`${PULSO_BASE_URL}/products`, {
@@ -108,7 +121,7 @@ export async function PUT(request) {
       const data = await response.json();
       if (!response.ok) {
         return Response.json(
-          { error: data?.detail || data?.message || 'Error en lote al publicar en Pulso.' },
+          { error: serializePulsoError(data, 'Error en lote al publicar en Pulso.') },
           { status: response.status }
         );
       }
@@ -152,7 +165,7 @@ export async function DELETE(request) {
 
     if (!response.ok && response.status !== 404) {
       return Response.json(
-        { error: data?.detail || data?.message || 'Error al pausar producto en Pulso.' },
+        { error: serializePulsoError(data, 'Error al pausar producto en Pulso.') },
         { status: response.status }
       );
     }
